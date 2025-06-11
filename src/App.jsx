@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import CounselorProfile from './pages/counsellor/CounselorProfile';
 import UserLayout from "./layout/UserLayout"
 import UserDashboard from "./pages/UserDashboard"
+import CounsellorsCard from "./pages/users/CounselorsCard"
 
 function App() {
 
@@ -34,6 +35,7 @@ function App() {
 
           <Route path='' element= {<UserLayout />}>
         <Route exact path="/user" element={<UserDashboard/>} />
+         <Route exact path="/counsellor/card" element={<CounsellorsCard />} />
          <Route  path="/user/profile" element={<CounselorProfile />} />
          </Route>
       </Routes>
