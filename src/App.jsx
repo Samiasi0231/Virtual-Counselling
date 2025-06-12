@@ -1,18 +1,14 @@
 import React, { useEffect } from 'react';
-import {
-  Routes,
-  Route,
-  useLocation
-} from 'react-router-dom';
+import { Routes,Route,useLocation} from 'react-router-dom';
 import './css/style.css';
-import './charts/ChartjsConfig';
-
-// Import pages
+import ProtectedRoute from './protectedroute/ProtectedRoute';
 import CounsellorLayout from './layout/CounsellorLayout';
 import Dashboard from './pages/Dashboard';
 import CounselorProfile from './pages/counsellor/CounselorProfile';
-import UserLayout from "./layout/UserLayout"
-import UserDashboard from "./pages/UserDashboard"
+import { AuthProvider } from '../src/authcontext/Authcontext';
+import Login from "./components/login/Login"
+import Home from './components/home/HomePage';
+import Register from './components/registrater/Registrater';
 import CounsellorsCard from "./pages/users/CounselorsCard"
 
 function App() {
@@ -27,20 +23,35 @@ function App() {
 
   return (
     <>
+    <AuthProvider>
       <Routes>
-        <Route path='' element= {<CounsellorLayout />}>
-        <Route exact path="/" element={<Dashboard />} />
-         <Route  path="/counselor/profile" element={<CounselorProfile />} />
-         </Route>
+        {/* Public */}
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
+        <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+  <Route path="" element={<CounsellorLayout />}>
+    <Route path="/student/dashboard" element={<Dashboard />} />
+  </Route>
+</Route>
 
-          <Route path='' element= {<UserLayout />}>
-        <Route exact path="/user" element={<UserDashboard/>} />
-         <Route exact path="/counsellor/card" element={<CounsellorsCard />} />
-         <Route  path="/user/profile" element={<CounselorProfile />} />
-         </Route>
+<Route element={<ProtectedRoute allowedRoles={['counselor']} />}>
+  <Route path="" element={<CounsellorLayout />}>
+    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/counsellor/card" element={<CounsellorsCard />} />
+    <Route path="/counselor/profile" element={<CounselorProfile />} />
+  </Route>
+</Route>
       </Routes>
+      </AuthProvider>
     </>
   );
 }
 
 export default App;
+  {/* <Route path='' element= {<UserLayout />}>
+        <Route exact path="/user" element={<UserDashboard/>} />
+         <Route exact path="/counsellor/card" element={<CounsellorsCard />} />
+         <Route  path="/user/profile" element={<CounselorProfile />} />
+         </Route> */}
