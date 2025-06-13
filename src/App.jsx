@@ -10,6 +10,7 @@ import Login from "./components/login/Login"
 import Home from './components/home/HomePage';
 import Register from './components/registrater/Registrater';
 import CounsellorsCard from "./pages/users/CounselorsCard"
+import ChatList from "../src/CounsellingChat/ChatList"
 
 function App() {
 
@@ -30,9 +31,13 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
-        <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+
+
+ <Route element={<ProtectedRoute allowedRoles={['student']} />}>
   <Route path="" element={<CounsellorLayout />}>
     <Route path="/student/dashboard" element={<Dashboard />} />
+      <Route exact path="/counsellor/card" element={<CounsellorsCard />} />
+       <Route path="/chat" element={<ChatList />} />
   </Route>
 </Route>
 
@@ -40,6 +45,8 @@ function App() {
   <Route path="" element={<CounsellorLayout />}>
     <Route path="/dashboard" element={<Dashboard />} />
     <Route path="/counsellor/card" element={<CounsellorsCard />} />
+    <Route path="/chat" element={<ChatList />} />
+    <Route  path="/user/profile" element={<CounselorProfile />} />
     <Route path="/counselor/profile" element={<CounselorProfile />} />
   </Route>
 </Route>
@@ -50,8 +57,3 @@ function App() {
 }
 
 export default App;
-  {/* <Route path='' element= {<UserLayout />}>
-        <Route exact path="/user" element={<UserDashboard/>} />
-         <Route exact path="/counsellor/card" element={<CounsellorsCard />} />
-         <Route  path="/user/profile" element={<CounselorProfile />} />
-         </Route> */}

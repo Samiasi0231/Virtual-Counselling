@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../authcontext/Authcontext';
 import { useNavigate } from 'react-router-dom';
+import homepage from "../../images/homepage.jpeg"
 
 export default function RegisterForm() {
   
@@ -8,7 +9,7 @@ export default function RegisterForm() {
     name: '',
     email: '',
     password: '',
-    role: 'student',
+    role: '',
   });
   const [errors, setErrors] = useState({});
   const { register } = useAuth();
@@ -20,6 +21,7 @@ export default function RegisterForm() {
     if (!form.name.trim()) newErrors.name = 'Name is required.';
     if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Invalid email.';
     if (form.password.length < 6) newErrors.password = 'Password must be at least 6 characters.';
+     if (!form.role) newErrors.role = 'Please select a role.';
     return newErrors;
   };
 
@@ -48,18 +50,20 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row items-center justify-center bg-gray-100 p-6">
+    <div className="min-h-screen gap-1 flex flex-col lg:flex-row items-center justify-center bg-purple-600 p-6">
       {/* Image Side */}
-      <div className="hidden lg:flex w-full lg:w-1/2 justify-center">
-        <img
-          src="https://source.unsplash.com/600x600/?university,education"
-          alt="register"
-          className="rounded-xl shadow-lg max-w-full h-auto"
-        />
+  <div className="hidden lg:flex w-full lg:w-1/2 justify-center items-center h-screen">
+  <img
+    src={homepage}
+    alt="register"
+    className="rounded-xl shadow-lg w-full h-[90%] object-cover"
+  />
+
+
       </div>
 
       {/* Form Side */}
-      <div className="w-full lg:w-1/2 bg-white p-8 rounded-xl shadow-lg">
+      <div className=" w-full h-[90%]  lg:w-1/2 bg-white p-8 rounded-xl shadow-lg">
         <h2 className="text-2xl font-bold text-center mb-6">Create Your Account</h2>
 
         {/* Social Sign Up Buttons */}
@@ -83,7 +87,7 @@ export default function RegisterForm() {
         <form className="flex flex-col space-y-4" onSubmit={handleSubmit}>
           <div>
             <input
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-600"
               name="name"
               placeholder="Name"
               onChange={handleChange}
@@ -94,7 +98,7 @@ export default function RegisterForm() {
 
           <div>
             <input
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-600"
               name="email"
               type="email"
               placeholder="Email"
@@ -106,7 +110,7 @@ export default function RegisterForm() {
 
           <div>
             <input
-              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-600"
               name="password"
               type="password"
               placeholder="Password"
@@ -116,18 +120,18 @@ export default function RegisterForm() {
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
           </div>
 
-          <select
-            name="role"
-            className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-            onChange={handleChange}
-            value={form.role}         
-         
-         
-          >
-            <option value="student">Select</option>
-            <option value="student">Student</option>
-            <option value="counselor">Counselor</option>
-          </select>
+       <select
+  name="role"
+  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-600"
+  onChange={handleChange}
+  value={form.role}
+>
+  <option value="">Select</option>
+  <option value="student">Student</option>
+  <option value="counselor">Counselor</option>
+</select>
+{errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>} 
+
 
           <button
             type="submit"
