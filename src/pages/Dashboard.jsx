@@ -7,6 +7,7 @@ import DashboardCard03 from '../partials/dashboard/DashboardCard03';
 import DashboardCard04 from '../partials/dashboard/DashboardCard04';
 import DashboardCard10 from '../partials/dashboard/DashboardCard10';
 import DashboardCard05 from '../partials/dashboard/DashboardCared05';
+import Studentsmood from "../partials/dashboard/Studentsmood"
 
 
 import Banner from '../layout/Banner';
@@ -45,21 +46,20 @@ function Dashboard() {
 
             {/* Cards */}
             <div className="grid grid-cols-12 gap-6">
-
-              {/* Line chart (Acme Plus) */}
+              {/* Line chart (welocme counsellor) */}
               <DashboardCard01 />
-              {/* Line chart (Acme Advanced) */}
+              {/* Line chart (message info) */}
               <DashboardCard02 />
-              {/* Line chart (Acme Professional) */}
+              {/* Line chart (active user) */}
               <DashboardCard03 />
-              {/* Bar chart (Direct vs Indirect) */}
+              {/* (TodaysAppointments) */}
               <DashboardCard04 />
+                  {/* (Studentmood) */}
+               <Studentsmood />
               {/* Line chart (Real Time Value) */}
                <DashboardCard05 />
               {/* Card (Customers) */}
-              <DashboardCard10 />
-           
-              
+              <DashboardCard10 />    
             </div>
 
           </div>

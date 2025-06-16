@@ -1,5 +1,5 @@
 import React from 'react';
-import MainLayout from '../../layout/CounsellorLayout';
+
 
 const CounselorProfile = () => {
   return (

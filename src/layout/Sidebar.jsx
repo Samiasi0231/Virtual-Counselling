@@ -178,7 +178,7 @@ function Sidebar({
                 }}
               </SidebarLinkGroup>
               {/* Session */}
-              <SidebarLinkGroup activecondition={pathname.includes("ecommerce")}>
+              <SidebarLinkGroup activecondition={pathname.includes("session")}>
                 {(handleClick, open) => {
                   return (
                     <React.Fragment>

@@ -24,34 +24,24 @@ function App() {
 
   return (
     <>
-    <AuthProvider>
+  
       <Routes>
         {/* Public */}
-        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
-
-
- <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-  <Route path="" element={<CounsellorLayout />}>
+         <Route path="" element={<CounsellorLayout />}>
     <Route path="/student/dashboard" element={<Dashboard />} />
       <Route exact path="/counsellor/card" element={<CounsellorsCard />} />
        <Route path="/chat" element={<ChatList />} />
-  </Route>
-</Route>
-
-<Route element={<ProtectedRoute allowedRoles={['counselor']} />}>
-  <Route path="" element={<CounsellorLayout />}>
-    <Route path="/dashboard" element={<Dashboard />} />
+    <Route path="/" element={<Dashboard />} />
     <Route path="/counsellor/card" element={<CounsellorsCard />} />
     <Route path="/chat" element={<ChatList />} />
     <Route  path="/user/profile" element={<CounselorProfile />} />
     <Route path="/counselor/profile" element={<CounselorProfile />} />
   </Route>
-</Route>
+
       </Routes>
-      </AuthProvider>
     </>
   );
 }
