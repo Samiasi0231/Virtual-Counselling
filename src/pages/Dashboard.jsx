@@ -7,10 +7,13 @@ import DashboardCard03 from '../partials/dashboard/DashboardCard03';
 import DashboardCard04 from '../partials/dashboard/DashboardCard04';
 import DashboardCard10 from '../partials/dashboard/DashboardCard10';
 import DashboardCard05 from '../partials/dashboard/DashboardCared05';
-import Studentsmood from "../partials/dashboard/Studentsmood"
+
 
 
 import Banner from '../layout/Banner';
+import SelfCareTips from './users/SelfCareTips';
+import UpcomingSession from '../partials/dashboard/UpcomingSection';
+import LastSession from '../partials/dashboard/LastSession';
 
 function Dashboard() {
 
@@ -44,7 +47,7 @@ function Dashboard() {
 
             </div>
 
-            {/* Cards */}
+            {/* Cards counselling */}
             <div className="grid grid-cols-12 gap-6">
               {/* Line chart (welocme counsellor) */}
               <DashboardCard01 />
@@ -55,11 +58,20 @@ function Dashboard() {
               {/* (TodaysAppointments) */}
               <DashboardCard04 />
                   {/* (Studentmood) */}
-               <Studentsmood />
-              {/* Line chart (Real Time Value) */}
+              {/*  (GroupEventPlanner) */}
                <DashboardCard05 />
+
+               
+              {/* Cards students  */}
+             {/* (SelfCareTips) */}
+                <SelfCareTips />
+                {/* (UpcomingSession) */}
+                <UpcomingSession />
+                  {/* (UpcomingSession) */}
+                <LastSession />
               {/* Card (Customers) */}
-              <DashboardCard10 />    
+              <DashboardCard10 />   
+
             </div>
 
           </div>

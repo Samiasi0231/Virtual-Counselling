@@ -81,10 +81,10 @@ const TodaysAppointments = () => {
               </div>
 
               <div className="flex gap-2">
-                <button className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+                <button className="bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded hover:bg--900 transition">
                   Join
                 </button>
-                <button className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition">
+                <button className=" border-purple-700 text-purple-700 hover:bg-purple-200  px-4 py-2 rounded  transition">
                   Reschedule
                 </button>
               </div>

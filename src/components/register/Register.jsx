@@ -127,7 +127,6 @@ export default function RegisterForm() {
   value={form.role}
 >
   <option value="">Select</option>
-  <option value="student">Student</option>
   <option value="counselor">Counselor</option>
 </select>
 {errors.role && <p className="text-red-500 text-sm mt-1">{errors.role}</p>} 

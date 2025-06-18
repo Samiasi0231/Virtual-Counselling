@@ -9,7 +9,7 @@ const UpcomingSession = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-5 w-full max-w-md">
+     <div className="flex flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-purple-800">
           🟣 Upcoming Session
@@ -36,7 +36,7 @@ const UpcomingSession = () => {
         <button className="flex-1 bg-purple-700 hover:bg-purple-800 text-white px-4 py-2 rounded text-sm font-medium transition">
           Join Session
         </button>
-        <button className="flex-1 border border-purple-700 text-purple-700 hover:bg-purple-50 px-4 py-2 rounded text-sm font-medium transition">
+        <button className="flex-1 border border-purple-700 text-purple-700 hover:bg-purple-200 px-4 py-2 rounded text-sm font-medium transition">
           Reschedule
         </button>
       </div>

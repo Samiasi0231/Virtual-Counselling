@@ -53,7 +53,7 @@ const GroupEventPlanner = () => {
         <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
           🟢 Group Event Planner
         </h2>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+        <button className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-800 transition">
           + Create Event
         </button>
       </div>
@@ -76,13 +76,13 @@ const GroupEventPlanner = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  <button className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition text-sm">
+                  <button className=" text-white px-3 py-1 rounded bg-purple-700 hover:bg-purple-800 transition text-sm">
                     Join
                   </button>
-                  <button className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600 transition text-sm">
+                  <button className="border border-purple-700 text-purple-700 hover:bg-purple-200  px-3 py-1 rounded  transition text-sm">
                     Edit
                   </button>
-                  <button className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition text-sm">
+                  <button className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-900 transition text-sm">
                     Cancel
                   </button>
                 </div>

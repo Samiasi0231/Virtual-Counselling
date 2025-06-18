@@ -13,7 +13,7 @@ const LastSessionCard = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-5 w-full max-w-md">
+     <div className="flex flex-row gap-6 col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
       <h2 className="text-lg font-semibold text-purple-800 mb-3">
         📝 Last Session Summary
       </h2>
@@ -42,4 +42,4 @@ const LastSessionCard = () => {
   );
 };
 
-export default LastSession;
+export default LastSessionCard;
