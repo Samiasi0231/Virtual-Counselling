@@ -8,11 +8,11 @@ import App from './App';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
-    <AuthProvider>
+    
       <ThemeProvider>
         <App />
       </ThemeProvider>
-      </AuthProvider>
+    
     </Router>
   </React.StrictMode>
 );
