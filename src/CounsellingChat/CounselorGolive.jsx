@@ -1,96 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { FaLink, FaPlus, FaExternalLinkAlt, FaClock } from 'react-icons/fa';
+import React, { useState } from 'react';
+import { FaLink, FaPlus, FaExternalLinkAlt } from 'react-icons/fa';
 
-function CounselorMeetLinkManager({ counselorId }) {
+// Dummy student data
+const dummyStudents = [
+  { id: 's1', name: 'John Doe' },
+  { id: 's2', name: 'Mary Johnson' },
+  { id: 's3', name: 'Ahmed Bello' },
+  { id: 's4', name: 'Chinwe Okeke' },
+];
+
+function CounselorMeetLinkManager() {
+  const [meetingTitle, setMeetingTitle] = useState('');
   const [meetUrl, setMeetUrl] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState([]);
   const [links, setLinks] = useState([]);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [, forceUpdate] = useState(0); // for countdown rerender
-
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const linksPerPage = 3;
 
-  useEffect(() => {
-    const dummyLinks = [
-      {
-        id: '1',
-        title: 'Career Session - June 20',
-        url: 'https://meet.google.com/abc-1234-xyz',
-        createdAt: new Date().toISOString(),
-        startTime: new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString(), // 2 hrs later
-      },
-      {
-        id: '2',
-        title: 'Academic Review',
-        url: 'https://meet.google.com/review-session',
-        createdAt: new Date().toISOString(),
-        startTime: new Date(Date.now() + 1000 * 60 * 30).toISOString(), // 30 mins later
-      },
-      {
-        id: '3',
-        title: 'Past Counseling',
-        url: 'https://meet.google.com/past-1',
-        createdAt: new Date().toISOString(),
-        startTime: new Date(Date.now() - 1000 * 60 * 60 * 1).toISOString(),
-      },
-      {
-        id: '4',
-        title: 'Team Planning',
-        url: 'https://meet.google.com/team-plan',
-        createdAt: new Date().toISOString(),
-        startTime: new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(),
-      },
-      {
-        id: '5',
-        title: 'Parent Meeting',
-        url: 'https://meet.google.com/parent-1',
-        createdAt: new Date().toISOString(),
-        startTime: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
-      },
-    ];
-    setLinks(dummyLinks);
+  const allStudentIds = dummyStudents.map(s => s.id);
+  const isAllSelected = selectedStudents.length === allStudentIds.length;
 
-    const interval = setInterval(() => forceUpdate(n => n + 1), 1000);
-    return () => clearInterval(interval);
-  }, [counselorId]);
+  const handleToggleStudent = (id) => {
+    setSelectedStudents(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedStudents(prev =>
+      isAllSelected ? [] : allStudentIds
+    );
+  };
 
   const handleShareLink = () => {
     setError('');
     setSuccessMsg('');
+
+    if (!meetingTitle.trim()) {
+      setError('Please enter a meeting title.');
+      return;
+    }
 
     if (!meetUrl.trim() || !meetUrl.includes('meet.google.com')) {
       setError('Please enter a valid Google Meet URL.');
       return;
     }
 
+    if (!meetingDate || !meetingTime) {
+      setError('Please select both date and time.');
+      return;
+    }
+
+    if (selectedStudents.length === 0) {
+      setError('Please select at least one student.');
+      return;
+    }
+
     const newLink = {
       id: Date.now().toString(),
-      title: `Session - ${new Date().toLocaleString()}`,
-      url: meetUrl,
-      createdAt: new Date().toISOString(),
-      startTime: new Date(Date.now() + 1000 * 60 * 45).toISOString(), // default 45 mins later
+      title: meetingTitle.trim(),
+      url: meetUrl.trim(),
+      date: meetingDate,
+      time: meetingTime,
+      recipients: selectedStudents,
     };
 
     setLinks(prev => [newLink, ...prev]);
     setMeetUrl('');
-    setSuccessMsg('Link shared successfully!');
+    setMeetingTitle('');
+    setMeetingDate('');
+    setMeetingTime('');
+    setSelectedStudents([]);
+    setSuccessMsg('Meeting link shared successfully!');
   };
 
-  const getCountdown = (startTime) => {
-    const diff = new Date(startTime) - new Date();
-    if (diff <= 0) return 'Started';
-
-    const seconds = Math.floor(diff / 1000) % 60;
-    const mins = Math.floor(diff / 1000 / 60) % 60;
-    const hours = Math.floor(diff / 1000 / 60 / 60) % 24;
-    const days = Math.floor(diff / 1000 / 60 / 60 / 24);
-
-    return `${days}d ${hours}h ${mins}m ${seconds}s`;
-  };
-
-  // Pagination logic
   const totalPages = Math.ceil(links.length / linksPerPage);
   const paginatedLinks = links.slice(
     (currentPage - 1) * linksPerPage,
@@ -103,50 +90,101 @@ function CounselorMeetLinkManager({ counselorId }) {
         <FaLink /> Counselor Meeting Links
       </h2>
 
-      {/* Input */}
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-3 mb-4">
+      {/* Form Section */}
+      <div className="space-y-4 mb-4">
+        <input
+          type="text"
+          placeholder="Enter meeting title or topic"
+          value={meetingTitle}
+          onChange={e => setMeetingTitle(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+
         <input
           type="url"
           placeholder="Enter Google Meet link"
           value={meetUrl}
           onChange={e => setMeetUrl(e.target.value)}
-          className="w-full md:flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
         />
+
+        <div className="grid grid-cols-2 gap-4">
+          <input
+            type="date"
+            value={meetingDate}
+            onChange={e => setMeetingDate(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+          <input
+            type="time"
+            value={meetingTime}
+            onChange={e => setMeetingTime(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        {/* Student Selection */}
+        <div>
+          <p className="font-medium text-gray-700 mb-1">Select Students:</p>
+          <div className="flex items-center gap-2 mb-2">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={handleToggleAll}
+              className="accent-purple-600"
+            />
+            <span className="text-sm text-purple-700 font-medium">Select All</span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {dummyStudents.map(student => (
+              <label key={student.id} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={selectedStudents.includes(student.id)}
+                  onChange={() => handleToggleStudent(student.id)}
+                  className="accent-purple-600"
+                />
+                <span className="text-sm text-gray-700">{student.name}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <button
           onClick={handleShareLink}
           className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
         >
           <FaPlus /> Share Link
         </button>
+
+        {error && <p className="text-red-600">{error}</p>}
+        {successMsg && <p className="text-green-600">{successMsg}</p>}
       </div>
 
-      {/* Messages */}
-      {error && <p className="text-red-600 mb-2">{error}</p>}
-      {successMsg && <p className="text-green-600 mb-2">{successMsg}</p>}
-
-      {/* Links */}
+      {/* Shared Links */}
       <h3 className="font-semibold text-lg mb-3 text-gray-700">Shared Links</h3>
       {paginatedLinks.length === 0 ? (
         <p className="text-gray-500">No links to display.</p>
       ) : (
         <ul className="space-y-4">
           {paginatedLinks.map(link => {
-            const isUpcoming = new Date(link.startTime) > new Date();
+            const recipientNames = dummyStudents
+              .filter(s => link.recipients.includes(s.id))
+              .map(s => s.name)
+              .join(', ');
+
             return (
               <li
                 key={link.id}
-                className="bg-gray-50 p-4 rounded-lg shadow-sm border flex justify-between items-center"
+                className="bg-gray-50 p-4 rounded-lg shadow-sm border flex justify-between items-start gap-4"
               >
                 <div>
                   <h4 className="font-medium text-gray-800">{link.title}</h4>
-                  <p className="text-sm text-gray-600">
-                    📅 Starts at: {new Date(link.startTime).toLocaleString()}
+                  <p className="text-sm text-gray-600">📅 {link.date} ⏰ {link.time}</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    👥 Sent to: {recipientNames || 'N/A'}
                   </p>
-                  {isUpcoming && (
-                    <p className="text-sm text-purple-600 flex items-center gap-1 mt-1">
-                      <FaClock className="text-purple-600" /> Countdown: {getCountdown(link.startTime)}
-                    </p>
-                  )}
                   <p className="text-sm text-gray-500 truncate max-w-sm mt-1">{link.url}</p>
                 </div>
                 <a
@@ -163,7 +201,7 @@ function CounselorMeetLinkManager({ counselorId }) {
         </ul>
       )}
 
-      {/* Pagination Controls */}
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="mt-6 flex justify-center items-center gap-4">
           <button

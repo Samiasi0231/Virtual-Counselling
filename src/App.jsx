@@ -5,20 +5,19 @@ import ProtectedRoute from './protectedroute/ProtectedRoute';
 import CounsellorLayout from './layout/CounsellorLayout';
 import Dashboard from './pages/Dashboard';
 import CounselorProfile from './pages/counsellor/CounselorProfile';
-import { AuthProvider } from '../src/authcontext/Authcontext';
 import Login from "./components/login/Login"
-import Home from './components/home/HomePage';
 import Register from './components/register/Register';
 import CounsellorsCard from "./pages/users/CounselorsCard"
-import Activity from "./CounsellingChat/pages/ActivityPage"
+import Activity from "./CounsellingChat/ActivityPage"
 import ChatPage from "./CounsellingChat/pages/ChatPage"
-import ActivityPage from './CounsellingChat/pages/ActivityPage';
+import ActivityPage from './CounsellingChat/ActivityPage';
 import Calendar from './CounsellingChat/Calendar';
 import UserGolive from "./CounsellingChat/UserGoLive"
 import CounselorGolive from "./CounsellingChat/CounselorGolive"
 import StudentList from './CounsellingChat/StudentList';
 import CounselorList from "./CounsellingChat/counselorList"
 import StudentNote from "./CounsellingChat/Studentnote"
+import  FeedBack from "./pages/users/FeedBack"
 
 function App() {
 
@@ -40,12 +39,13 @@ function App() {
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
          <Route path="" element={<CounsellorLayout />}>
          < Route  path='chat' element={<ChatPage/>}/>
-                {/* < Route  path='joinlive' element={<CounselorGolive/>}/>  */}
-                    < Route  path='joinlive' element={<UserGolive/>}/>
-                     < Route  path='studentlist' element={<StudentList/>}/>
-                       < Route  path='studentlist' element={<CounselorList/>}/>
+              < Route  path='joinlive' element={<CounselorGolive/>}/>  
+                    {/* < Route  path='joinlive' element={<UserGolive/>}/> */}
+                     {/* < Route  path='students' element={<StudentList/>}/> */}
+                       < Route  path='students' element={<CounselorList/>}/>
                             {/* < Route  path='counselornote' element={<CounselorNote/>}/> */}
-                               < Route  path='counselornote' element={<StudentNote/>}/>
+                               < Route  path='note' element={<StudentNote/>}/>
+                                    < Route  path='feedback' element={<FeedBack/>}/>
          < Route  path='activity' element={<ActivityPage/>}/>
           < Route  path='calendar' element={<Calendar/>}/>
       <Route exact path="/counsellor/card" element={<CounsellorsCard />} />

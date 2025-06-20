@@ -2,7 +2,7 @@ import React from 'react';
 import { FiSearch } from 'react-icons/fi';
 
 const activities = [
-  { id: 1, name: 'Counselor Jane', avatar: '/avatars/jane.png', lastMsg: 'Ready when you are 😊', time: '9:12 AM', unread: 2, online: true },
+  { id: 1, name: 'Counselor Jane', avatar: '/avatars/jane.png', lastMsg: 'Ready when you are ', time: '9:12 AM', unread: 2, online: true },
   { id: 2, name: 'Peer1 Alex', avatar: '/avatars/alex.png', lastMsg: 'Can we reschedule?', time: 'Yesterday', unread: 0, online: false },
   { id: 3, name: 'Peer2 Sam', avatar: '/avatars/sam.png', lastMsg: 'Thanks for the help!', time: 'Mon', unread: 1, online: true },
 ];

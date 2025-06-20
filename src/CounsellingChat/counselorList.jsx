@@ -11,21 +11,21 @@ function CounselorTable() {
         fullName: 'Mr. James Oladele',
         role: 'Counselor',
         status: 'Active',
-        profileImage: 'https://randomuser.me/api/portraits/men/22.jpg',
+        profileImage: 'https://randomuser.me/a',
       },
       {
         id: 2,
         fullName: 'Mrs. Linda Okoro',
         role: 'Counselor',
         status: 'Offline',
-        profileImage: 'https://randomuser.me/api/portraits/women/25.jpg',
+        profileImage: 'https://randomuser.me/api/',
       },
       {
         id: 3,
         fullName: 'Dr. Yusuf Ibrahim',
         role: 'Counselor',
         status: 'Active',
-        profileImage: 'https://randomuser.me/api/portraits/men/45.jpg',
+        profileImage: 'https://randomuser.me/a',
       },
     ];
 

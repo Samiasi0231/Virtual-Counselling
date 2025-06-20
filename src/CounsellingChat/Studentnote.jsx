@@ -77,7 +77,7 @@ function StudentReceivedNotes({ studentId }) {
   const grouped = groupNotesByDate(filteredNotes);
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow">
+    <div className="overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
       <h2 className="text-2xl font-semibold text-purple-700 mb-4">Your Counselor Notes</h2>
 
       {/* 🔍 Search Bar */}
