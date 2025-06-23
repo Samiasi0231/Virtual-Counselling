@@ -4,7 +4,7 @@ import Datepicker from '../components/Datepicker';
 import DashboardCard01 from '../partials/dashboard/DashboardCard01';
 import DashboardCard02 from '../partials/dashboard/DashboardCard02';
 import DashboardCard03 from '../partials/dashboard/DashboardCard03';
-import DashboardCard04 from '../partials/dashboard/DashboardCard04';
+ import DashboardCard04 from '../partials/dashboard/DashboardCard04';
 import DashboardCard10 from '../partials/dashboard/DashboardCard10';
 import DashboardCard05 from '../partials/dashboard/DashboardCared05';
 
@@ -12,7 +12,7 @@ import DashboardCard05 from '../partials/dashboard/DashboardCared05';
 
 import Banner from '../layout/Banner';
 import SelfCareTips from './users/SelfCareTips';
-import UpcomingSession from '../partials/dashboard/UpcomingSection';
+// import UpcomingSession from '../partials/dashboard/UpcomingSection';
 import LastSession from '../partials/dashboard/LastSession';
 
 function Dashboard() {
@@ -55,8 +55,7 @@ function Dashboard() {
               <DashboardCard02 />
               {/* Line chart (active user) */}
               <DashboardCard03 />
-              {/* (TodaysAppointments) */}
-              <DashboardCard04 />
+             
                   {/* (Studentmood) */}
               {/*  (GroupEventPlanner) */}
                <DashboardCard05 />
@@ -66,12 +65,13 @@ function Dashboard() {
              {/* (SelfCareTips) */}
                 <SelfCareTips />
                 {/* (UpcomingSession) */}
-                <UpcomingSession />
+                {/* <UpcomingSession /> */}
                   {/* (UpcomingSession) */}
                 <LastSession />
               {/* Card (Customers) */}
               <DashboardCard10 />   
-
+    {/* (TodaysAppointments) */}
+               <DashboardCard04 /> 
             </div>
 
           </div>

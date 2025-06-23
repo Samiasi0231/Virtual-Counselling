@@ -13,10 +13,11 @@ const LastSessionCard = () => {
   };
 
   return (
-     <div className="flex flex-row gap-6 col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
-      <h2 className="text-lg font-semibold text-purple-800 mb-3">
+   <div className="flex flex-col gap-4 p-4 col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
+      <h2 className="text-lg font-semibold text-purple-800">
         📝 Last Session Summary
       </h2>
+
 
       <div className="text-sm text-gray-700 space-y-2">
         <p>

@@ -85,7 +85,7 @@ function CounselorMeetLinkManager() {
   );
 
   return (
-    <div className="bg-white rounded-xl shadow p-6 max-w-2xl mx-auto">
+     <div className="overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
       <h2 className="text-2xl font-semibold text-purple-700 flex items-center gap-2 mb-4">
         <FaLink /> Counselor Meeting Links
       </h2>

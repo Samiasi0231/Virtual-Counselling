@@ -14,15 +14,15 @@ export default function UpcomingEventsCard() {
     },
     {
       id: '2',
-      title: 'Parent-Teacher Meeting',
-      date: '2025-06-20',
+      title: 'Students welfare Meeting',
+      date: '2025-10-20',
       time: '14:00',
       url: 'https://meet.google.com/parent-456',
     },
     {
       id: '3',
       title: 'Past Session (Won’t show)',
-      date: '2025-06-10',
+      date: '2025-08-10',
       time: '09:00',
       url: 'https://meet.google.com/expired-789',
     },

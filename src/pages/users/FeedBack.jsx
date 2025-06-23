@@ -20,8 +20,8 @@ const Feedback = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-3xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+ 
+      <div className="overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
         {/* Header */}
         <div className="bg-purple-700 text-white px-8 py-6">
           <h1 className="text-3xl font-bold">🗣️ Share Your Feedback</h1>
@@ -41,7 +41,7 @@ const Feedback = () => {
                 className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600"
               >
                 <option value="Counseling">Counseling</option>
-                <option value="Platform">Platform</option>
+                <option value="Platform">Student</option>
               </select>
             </div>
 
@@ -69,7 +69,7 @@ const Feedback = () => {
           </div>
         </div>
       </div>
-    </div>
+
   );
 };
 

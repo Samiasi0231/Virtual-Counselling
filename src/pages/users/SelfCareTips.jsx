@@ -35,16 +35,14 @@ const SelfCareTips = () => {
   }, [today]);
 
   return (
- <div className="flex flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
-      <h2 className="text-lg  text-purple-800 mb-3">
-       Self-Care Tip of the Day
-      </h2>
-
+ <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
+ 
+      <h3 className=" p-4 text-lg font-semibold text-purple-700 mb-3">   Self-Care Tip of the Day</h3>
       <div className="bg-purple-50 p-4 rounded-md text-purple-900 text-sm font-medium">
         {tip}
       </div>
 
-      <p className="text-xs text-gray-500 mt-2 ">
+      <p className="text-2xl text-gray-500 mt-2 ">
         A small step toward your well-being.
       </p>
     </div>
