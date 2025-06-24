@@ -1,12 +1,12 @@
 import React, { useEffect } from 'react';
-import { Routes,Route,useLocation} from 'react-router-dom';
+import { Routes,Route,useLocation } from 'react-router-dom';
 import './css/style.css';
-// import ProtectedRoute from './protectedroute/ProtectedRoute';
+//  import { AuthProvider } from './Auth/AuthContext';
+ import ProtectedRoute from './protectedroute/ProtectedRoute';
+import CounselorAccess from './Auth/counselorAccess';
 import CounsellorLayout from './layout/CounsellorLayout';
 import Dashboard from './pages/Dashboard';
 import CounselorProfile from './pages/counsellor/CounselorProfile';
-//  import Login from "./components/home/Login"
- import Register from './components/register/Register';
 import CounsellorsCard from "./pages/users/CounselorsCard"
 import Activity from "./CounsellingChat/ActivityPage"
 import ChatPage from "./CounsellingChat/pages/ChatPage"
@@ -31,12 +31,19 @@ function App() {
 
   return (
     <>
-  
       <Routes>
-        {/* Public */}
-        {/* <Route path="/login" element={<Login />} />  */}
-         <Route path="/register" element={<Register />} />
+        
+      <Route
+        path="/student"
+        element={
+          <ProtectedRoute allowedRoles={["student"]}>
+            < CounselorAccess/>
+          </ProtectedRoute>
+        }
+      />
+       
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
+        
          <Route path="" element={<CounsellorLayout />}>
          < Route  path='chat' element={<ChatPage/>}/>
               < Route  path='joinlive' element={<CounselorGolive/>}/>  
@@ -57,6 +64,8 @@ function App() {
   </Route>
 
       </Routes>
+    
+
     </>
   );
 }

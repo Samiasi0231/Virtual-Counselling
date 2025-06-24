@@ -114,7 +114,7 @@ const LastSessionCard = () => {
           type="text"
           value={counselor}
           onChange={(e) => setCounselor(e.target.value)}
-          placeholder="e.g. Counselor #1234"
+          placeholder="CounselorIni "
           className="w-full p-2 border rounded"
         />
       </div>
