@@ -4,9 +4,12 @@ import Datepicker from '../components/Datepicker';
 import DashboardCard01 from '../partials/dashboard/DashboardCard01';
 import DashboardCard02 from '../partials/dashboard/DashboardCard02';
 import DashboardCard03 from '../partials/dashboard/DashboardCard03';
- import DashboardCard04 from '../partials/dashboard/DashboardCard04';
-import DashboardCard10 from '../partials/dashboard/DashboardCard10';
+import DashboardCard04 from '../partials/dashboard/DashboardCard04';
+import DashboardCard10 from '../partials/dashboard/CounsellorList';
 import DashboardCard05 from '../partials/dashboard/DashboardCared05';
+import StudentWelocome from '../partials/dashboard/StudentWelcom';
+// import GoalTaskCard from "../partials/dashboard/GoalTaskCard"
+
 
 
 
@@ -16,6 +19,12 @@ import SelfCareTips from './users/SelfCareTips';
 import LastSession from '../partials/dashboard/LastSession';
 
 function Dashboard() {
+
+
+    const userType = localStorage.getItem("user_type");
+
+  if (!["student", "counsellor"].includes(userType)) {
+    return <p className="text-center text-red-500">Unauthorized user</p>;}
 
   return (
     <>
@@ -47,31 +56,30 @@ function Dashboard() {
 
             </div>
 
-            {/* Cards counselling */}
             <div className="grid grid-cols-12 gap-6">
-              {/* Line chart (welocme counsellor) */}
-              <DashboardCard01 />
-              {/* Line chart (message info) */}
-              <DashboardCard02 />
-              {/* Line chart (active user) */}
-              <DashboardCard03 />
-             
-                  {/* (Studentmood) */}
-              {/*  (GroupEventPlanner) */}
-               <DashboardCard05 />
+ {/* counsellor cards */}
+ {userType ==="counsellor"&&(
+  <>
+    <DashboardCard01 />
+   <DashboardCard02 />
+    <DashboardCard03 />
+    <DashboardCard04 /> 
+                   </>
+ )}
 
                
-              {/* Cards students  */}
-             {/* (SelfCareTips) */}
-                <SelfCareTips />
-                {/* (UpcomingSession) */}
-                {/* <UpcomingSession /> */}
-                  {/* (UpcomingSession) */}
-                <LastSession />
-              {/* Card (Customers) */}
-              <DashboardCard10 />   
-    {/* (TodaysAppointments) */}
-               <DashboardCard04 /> 
+{/* student cards */}
+ {userType ==="student"&&(
+  <>
+  <StudentWelocome />
+  <SelfCareTips />
+<DashboardCard05 />
+<DashboardCard10 />   
+<LastSession />
+
+   </>
+ )}
+
             </div>
 
           </div>

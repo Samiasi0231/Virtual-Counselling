@@ -1,10 +1,8 @@
-import { useEffect, useContext, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { AuthContext } from "../Auth/AuthContext"
-import axiosClient from "../utils/axoi-client-analytics"
+import axiosClient from "../utils/axios-client-analytics";
 
-const CounselorAccess = () => {
-  const { login } = useContext(AuthContext);
+const StudentAccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -15,38 +13,39 @@ const CounselorAccess = () => {
     const token = params.get("token");
     const user_type = params.get("user_type");
 
+
     const authenticateAndFetchUser = async () => {
       if (!token || !user_type) {
-        navigate("/login");
+        // navigate("/login");
         return;
       }
 
       try {
-   
-        login({ token, user_type });
+        // Call backend to validate token
+        const response = await axiosClient.get(
+          `vpc/me/?token=${token}&user_type=${user_type}`
+        );
 
-        
-        const response = await axiosClient.get("/vpc/me", {
-          headers: {
-            Authorization: `Bearer ${token}`, 
-          },
-        });
+        console.log("Authenticated user:", response);
 
-       
-        console.log("Authenticated user:", response.data);
+     
 
-        navigate("/"); 
+        // Save credentials to localStorage
+        localStorage.setItem("USER_ACCESS_TOKEN", token);
+        localStorage.setItem("user_type", user_type);
+
+         window.location.href = "/student";
       } catch (err) {
         console.error("Error fetching user:", err);
         setError("Invalid or expired token.");
-        navigate("/login");
+        // navigate("/login");
       } finally {
         setLoading(false);
       }
     };
 
     authenticateAndFetchUser();
-  }, [location.search, login, navigate]);
+  }, []);
 
   if (loading) return <p className="text-center">Authenticating...</p>;
   if (error) return <p className="text-red-500 text-center">{error}</p>;
@@ -54,4 +53,4 @@ const CounselorAccess = () => {
   return null;
 };
 
-export default CounselorAccess;
+export default StudentAccess;
