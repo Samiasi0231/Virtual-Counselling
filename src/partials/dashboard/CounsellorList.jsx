@@ -54,6 +54,7 @@ function CounselorList() {
   <div className="flex flex-row gap-6 col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
       <div className="px-5 pt-5">
       <h2 className="text-xl font-bold mb-4 text-purple-800">Counselor List</h2>
+       <div className="overflow-x-auto">
       <table className="min-w-full table-auto text-left text-sm">
         <thead className="border-b bg-gray-100">
           <tr>
@@ -125,6 +126,7 @@ function CounselorList() {
           )}
         </tbody>
       </table>
+      </div>
     </div>
     </div>
   );
