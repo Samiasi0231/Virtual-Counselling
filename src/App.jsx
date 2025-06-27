@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 import { Routes,Route,useLocation } from 'react-router-dom';
 import './css/style.css';
 import Login from "./components/login/Login"
-import StudentProtectedRoute from './protectedroute/StudentProtectedRoute';
-import CounsellorProtectedRoute from "./protectedroute/counsellorProtectedRoute"
+import ProtectedRoute from './protectedroute/ProtectedRoute';
+import UserRehydrator from './utils/UserRedrator';
 import CounsellorAccess from './Auth/CounsellorAccess';
 import StudentAccess from './Auth/StudentAccess';
 import CounsellorLayout from './layout/Layout';
@@ -32,20 +32,24 @@ function App() {
 
   return (
     <>
+ 
+<UserRehydrator/>
       <Routes>
 
   <Route path='/login'element={<Login/>}/>
        <Route path='/counsellor/access'element={<CounsellorAccess/>}/>
-         <Route path='/student/access'element={<StudentAccess/>}/>
+       
+         <Route path="/student/access" element={<StudentAccess />} />
+
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
          
           {/* counsellor Protected Route */}
     <Route
     path="/counsellor"
     element={
-      <CounsellorProtectedRoute>
+      <ProtectedRoute allowedRoles={["counsellor"]}>
         <CounsellorLayout />
-      </CounsellorProtectedRoute>
+      </ProtectedRoute>
     }
   >
     <Route index element={<Dashboard />} />
@@ -63,9 +67,9 @@ function App() {
     <Route
     path="/student"
     element={
-      <StudentProtectedRoute>
+      <ProtectedRoute allowedRoles={["student"]}>
         <CounsellorLayout />
-      </StudentProtectedRoute>
+      </ProtectedRoute>
     }
   >
     <Route index element={<Dashboard />} />

@@ -1,19 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from 'react-avatar';
-
+import { useStateValue } from "../../Context/UseStateValue";
 function CounselorList() {
+  const [{ student, counsellor }] = useStateValue();
+  const user = student || counsellor;
+  const userType = user?.user_type;
+
   const [counselors, setCounselors] = useState([]);
-  const [userType, setUserType] = useState(null);
 
   useEffect(() => {
-    const storedUserType = localStorage.getItem("user_type");
-    const allowedUserTypes = ["student", "counsellor"];
-    const resolvedUserType = allowedUserTypes.includes(storedUserType)
-      ? storedUserType
-      : null;
-    setUserType(resolvedUserType);
-
+    
     const dummyCounselors = [
       {
         id: 1,

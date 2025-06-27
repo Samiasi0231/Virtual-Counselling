@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useStateValue } from "../Context/UseStateValue";
 import FilterButton from '../components/DropdownFilter';
 import Datepicker from '../components/Datepicker';
 import DashboardCard01 from '../partials/dashboard/DashboardCard01';
@@ -13,6 +14,7 @@ import StudentWelocome from '../partials/dashboard/StudentWelcom';
 
 
 
+
 import Banner from '../layout/Banner';
 import SelfCareTips from './users/SelfCareTips';
 // import UpcomingSession from '../partials/dashboard/UpcomingSection';
@@ -20,8 +22,10 @@ import LastSession from '../partials/dashboard/LastSession';
 
 function Dashboard() {
 
-
-    const userType = localStorage.getItem("user_type");
+  const [{ student, counsellor }] = useStateValue();
+  const user = student || counsellor;
+  const userType = user?.user_type;
+   
 
   if (!["student", "counsellor"].includes(userType)) {
     return <p className="text-center text-red-500">Unauthorized user</p>;}
