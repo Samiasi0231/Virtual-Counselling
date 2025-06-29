@@ -55,7 +55,14 @@ const StudentAccess = () => {
         localStorage.setItem("USER_ROLE", userType);
 
         setLoading(false);
-       navigate("/student");
+        if (userType === "student") {
+          navigate("/student");
+        } else if (userType === "counsellor") {
+          navigate("/counsellor");
+        } else {
+          navigate("/unauthorized");
+        }
+        
 
       } catch (err) {
         console.error("Auth failed:", err?.response?.data || err.message);

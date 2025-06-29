@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useStateValue } from "../Context/UseStateValue";
 import SidebarLinkGroup from "./SidebarLinkGroup";
 
 function Sidebar({
@@ -9,7 +10,6 @@ function Sidebar({
 }) {
   const location = useLocation();
   const { pathname } = location;
-
   const trigger = useRef(null);
   const sidebar = useRef(null);
 
@@ -17,9 +17,8 @@ function Sidebar({
   const [sidebarExpanded, setSidebarExpanded] = useState(storedSidebarExpanded === null ? false : storedSidebarExpanded === "true");
 
   //usertype
-  const storedUserType = localStorage.getItem("user_type");
-const allowedUserTypes = ["student", "counsellor"];
-const userType = allowedUserTypes.includes(storedUserType) ? storedUserType : null;
+  const [{ student, counsellor }] = useStateValue();
+  const userType = student ? "student" : counsellor ? "counsellor" : null;
 
 
   // close on click outside
@@ -101,7 +100,7 @@ const userType = allowedUserTypes.includes(storedUserType) ? storedUserType : nu
             </h3>
             <ul className="mt-3">
               {/* Dashboard */}
-              <SidebarLinkGroup activecondition={pathname === "/" || pathname.includes("dashboard")}>
+              <SidebarLinkGroup activecondition={pathname === `/${userType}` || pathname === `/${userType}/`}>
                 {(handleClick, open) => {
                   return (
                     <React.Fragment>
@@ -110,8 +109,8 @@ const userType = allowedUserTypes.includes(storedUserType) ? storedUserType : nu
 
                              <li className="mb-1 last:mb-0">
                             <NavLink
-                              end
-                              to={userType ? `/dashboard${userType}/` : "/unauthorized"}
+                            end
+                              to={userType ? `/${userType}` : "/unauthorized"}
                               className={({ isActive }) =>
                                 "block transition duration-150 truncate " + (isActive ? "text-violet-500" : "text-gray-500/90 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200")
                               }
