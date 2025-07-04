@@ -22,14 +22,14 @@ const SelfCareTips = () => {
       setToday(currentDay);
     };
 
-    updateTip(); // initial load
+    updateTip();
 
     const interval = setInterval(() => {
       const now = new Date().getDate();
       if (now !== today) {
         updateTip();
       }
-    }, 1000 * 60); // check every minute
+    }, 1000 * 60); 
 
     return () => clearInterval(interval);
   }, [today]);
@@ -37,12 +37,13 @@ const SelfCareTips = () => {
   return (
  <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
  
-      <h3 className=" p-4 text-lg font-semibold text-purple-700 mb-3">   Self-Care Tip of the Day</h3>
-      <div className="bg-purple-50 p-4 rounded-md text-purple-900 text-sm font-medium">
+      <h3 className=" p-4 text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">💜
+  Self-Care Tip of the Day</h3>
+      <h3 className="text-sm sm:text-base text-purple-700 dark:text-gray-300 leading-relaxed">
         {tip}
-      </div>
+      </h3>
 
-      <p className="text-2xl text-gray-500 mt-2 ">
+      <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300  leading-relaxed">
         A small step toward your well-being.
       </p>
     </div>

@@ -3,7 +3,7 @@ import React from 'react';
 export default function UpcomingEventsCard() {
   const now = new Date();
 
-  // 🧪 Dummy meetings array (normally comes from backend)
+
   const dummyMeetings = [
     {
       id: '1',
@@ -28,7 +28,7 @@ export default function UpcomingEventsCard() {
     },
   ];
 
-  // Filter future events
+
   const upcoming = dummyMeetings.filter(m => {
     const datetime = new Date(`${m.date}T${m.time}`);
     return datetime > now;
@@ -37,7 +37,7 @@ export default function UpcomingEventsCard() {
   return (
      <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
  
-      <h3 className=" p-4 text-xl font-semibold text-purple-700 mb-3"> 🟣Upcoming Events</h3>
+      <h3 className=" p-4 text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3"> 🟣Upcoming Events</h3>
 
       {upcoming.length === 0 ? (
         <p className="text-gray-500 px-3 ">No upcoming meetings yet.</p>

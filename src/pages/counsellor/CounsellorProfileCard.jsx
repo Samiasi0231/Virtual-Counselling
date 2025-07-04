@@ -14,10 +14,10 @@ const CounsellorProfileCard = () => {
       id: i,
       name: 'Ini Johnson',
       experience: '7 Years',
-      specialties: ['Anxiety', 'Depression', 'Workplace Mental Health', 'Relationship', 'Trauma'],
+      specialties: ['Anxiety', 'Depression', 'Mental Health', 'Trauma'],
       languages: ['English', 'Yoruba'],
-      image: '', // No image initially
-      profileUrl: `/profile/toluse-${i + 1}` // Example profile URL
+      image: '', 
+      profileUrl: `/profile/toluse-${i + 1}` 
     }))
   );
 
@@ -25,10 +25,10 @@ const CounsellorProfileCard = () => {
   const handleImageUpload = (e, index) => {
     const file = e.target.files[0];
     if (file) {
-      const newImageURL = URL.createObjectURL(file); // Create temp URL for preview
+      const newImageURL = URL.createObjectURL(file); 
       const updatedCounselors = [...counselors];
       updatedCounselors[index].image = newImageURL;
-      setCounselors(updatedCounselors); // Update state
+      setCounselors(updatedCounselors); 
     }
   };
 
@@ -38,47 +38,40 @@ const CounsellorProfileCard = () => {
         {counselors.map((counselor, index) => (
           <div key={counselor.id} className="bg-white shadow-md rounded-xl p-6 space-y-4 w-full">
             {/* Avatar and Top Info */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <label htmlFor={`image-upload-${index}`} className="cursor-pointer relative">
-                  {/* Show uploaded image or fallback to Avatar with initials */}
-                  {counselor.image ? (
-                    <img
-                      src={counselor.image}
-                      alt={counselor.name}
-                      className="w-16 h-16 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <Avatar
-                      name={counselor.name}
-                      size="64"
-                      round={true}
-                      className="w-16 h-16"
-                    />
-                  )}
-                  <input
-                    type="file"
-                    id={`image-upload-${index}`}
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload(e, index)}
-                    className="hidden"
-                  />
-                </label>
+           <div className="flex items-center justify-between">
+  <div className="flex items-center gap-4">
+    {/* Counselor Image or Avatar */}
+    <label htmlFor={`image-upload-${index}`} className="cursor-pointer relative">
+      {counselor.image ? (
+        <img
+          src={counselor.image}
+          alt={counselor.name}
+          className="w-12 h-12 rounded-full object-cover border border-gray-300"
+        />
+      ) : (
+        <Avatar
+          name={counselor.name}
+          size="48"
+          round={true}
+          className="w-12 h-12"
+        />
+      )}
+      <input
+        type="file"
+        id={`image-upload-${index}`}
+        accept="image/*"
+        onChange={(e) => handleImageUpload(e, index)}
+        className="hidden"
+      />
+    </label>
 
-                <div>
-                  <h2 className="text-lg font-semibold">{counselor.name}</h2>
-                  <p className="text-sm text-gray-600">Experience: {counselor.experience}</p>
-                </div>
-              </div>
-
-              {/* Link to profile based on userType */}
-              <Link
-                to={userType ? `/${userType}/profile` : "/unauthorized"}
-                className="text-white bg-purple-200 px-2 py-1 rounded text-sm font-medium hover:underline flex items-center gap-1"
-              >
-                View profile <span>→</span>
-              </Link>
-            </div>
+    {/* Name and Experience */}
+    <div>
+      <h2 className="text-base font-semibold text-gray-800">{counselor.name}</h2>
+      <p className="text-sm text-gray-500">Experience: {counselor.experience}</p>
+    </div>
+  </div>
+</div>
 
             {/* Specialties */}
             <div>
@@ -87,7 +80,7 @@ const CounsellorProfileCard = () => {
                 {counselor.specialties.map((tag, i) => (
                   <span
                     key={i}
-                    className="text-sm px-3 py-1 rounded-full bg-purple-100 text-purple-600"
+                    className="text-xs px-3  rounded-full bg-purple-100 text-purple-600"
                   >
                     {tag}
                   </span>
@@ -98,7 +91,7 @@ const CounsellorProfileCard = () => {
             {/* Languages */}
             <div>
               <p className="text-sm font-medium text-gray-800 mb-2">Languages:</p>
-              <div className="flex gap-4 text-sm text-purple-600">
+              <div className="flex gap-3 text-xs text-purple-600">
                 {counselor.languages.map((lang, i) => (
                   <span key={i}>{lang}</span>
                 ))}
@@ -107,8 +100,12 @@ const CounsellorProfileCard = () => {
 
             {/* Status Button */}
             <div className="pt-2">
-              <button className="w-full bg-purple-200 hover:bg-purple-900 text-white text-sm font-semibold py-2 rounded-lg">
-                ACTIVE
+              <button className="w-full bg-purple-500 hover:bg-purple-700 text-white text-sm font-semibold py-2 rounded-lg">
+                  <Link
+                to={userType ? `/${userType}/profile` : "/unauthorized"}
+              >
+                View profile <span>→</span>
+              </Link>
               </button>
             </div>
           </div>

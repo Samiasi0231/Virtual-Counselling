@@ -5,28 +5,22 @@ import Datepicker from '../components/Datepicker';
 import DashboardCard01 from '../partials/dashboard/DashboardCard01';
 import DashboardCard02 from '../partials/dashboard/DashboardCard02';
 import DashboardCard03 from '../partials/dashboard/DashboardCard03';
-import DashboardCard04 from '../partials/dashboard/DashboardCard04';
+// import DashboardCard04 from '../partials/dashboard/DashboardCard04';
 import DashboardCard10 from '../partials/dashboard/CounsellorList';
 import DashboardCard05 from '../partials/dashboard/DashboardCared05';
 import StudentWelocome from '../partials/dashboard/StudentWelcom';
 // import GoalTaskCard from "../partials/dashboard/GoalTaskCard"
-
-
-
-
-
 import Banner from '../layout/Banner';
 import SelfCareTips from './users/SelfCareTips';
 // import UpcomingSession from '../partials/dashboard/UpcomingSection';
-import LastSession from '../partials/dashboard/LastSession';
+import StudentShedule from '../partials/dashboard/StudentShedule';
+import CounsellorShedule from "./counsellor/CounsellorShedule"
 
 function Dashboard() {
 
   const [{ student, counsellor }] = useStateValue();
   const user = student || counsellor;
   const userType = user?.user_type;
-   
-
   if (!["student", "counsellor"].includes(userType)) {
     return <p className="text-center text-red-500">Unauthorized user</p>;}
 
@@ -62,24 +56,27 @@ function Dashboard() {
 
             <div className="grid grid-cols-12 gap-6">
  {/* counsellor cards */}
- {userType ==="counsellor"&&(
+ {userType ==="student"&&(
   <>
     <DashboardCard01 />
    <DashboardCard02 />
     <DashboardCard03 />
-    <DashboardCard04 /> 
+    <DashboardCard05 />
+    {/* <DashboardCard04 />  */}
+     <CounsellorShedule/>
                    </>
  )}
 
                
 {/* student cards */}
- {userType ==="student"&&(
+ {userType ==="counsellor"&&(
   <>
   <StudentWelocome />
   <SelfCareTips />
 <DashboardCard05 />
 <DashboardCard10 />   
-<LastSession />
+ <StudentShedule /> 
+
 
    </>
  )}

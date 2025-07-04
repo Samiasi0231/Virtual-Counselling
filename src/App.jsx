@@ -11,8 +11,9 @@ import Dashboard from './pages/Dashboard';
 import CounsellorCards from './pages/counsellor/CounsellorProfileCard';
 import CounsellorProfile from "./pages/counsellor/CounselorProfile"
 import ChatPage from "./CounsellingChat/pages/ChatPage"
-import ActivityPage from './CounsellingChat/ActivityPage';
-import Calendar from './CounsellingChat/Calendar';
+ import ActivityPage from './CounsellingChat/ActivityPage';
+import CounselorAvailability from './pages/counsellor/CounsellorAvailbibilty';
+import StudentBooking from './CounsellingChat/StudentBooking';
 import StudentjoinLive from "./CounsellingChat/UserGoLive"
 import Counsellorjoinlive from "./pages/counsellor/CounselorJoinLive"
 import CounselorList from "./pages/counsellor/CounsellorList"
@@ -37,7 +38,7 @@ function App() {
       <Routes>
 
   <Route path='/login'element={<Login/>}/>
-       <Route path='/counsellor/access'element={<CounsellorAccess/>}/>
+       <Route path='/counsellor/access'element={<StudentAccess/>}/>
        
          <Route path="/student/access" element={<StudentAccess />} />
 
@@ -45,9 +46,9 @@ function App() {
          
           {/* counsellor Protected Route */}
     <Route
-    path="/counsellor"
+    path="/student"
     element={
-      <ProtectedRoute allowedRoles={["counsellor"]}>
+      <ProtectedRoute allowedRoles={["student"]}>
         <CounsellorLayout />
       </ProtectedRoute>
     }
@@ -55,19 +56,21 @@ function App() {
     <Route index element={<Dashboard />} />
      < Route  path='joinlive' element={<Counsellorjoinlive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
-         < Route  path='calendar' element={<Calendar/>}/>
-         < Route  path='counsellornote' element={<CounsellorNote/>}/> 
-              < Route  path='activity' element={<ActivityPage/>}/>
-               {/* <Route  path="profile" element={<CounselorProfile/>} /> */}
+       <Route exact path="counsellor/card" element={<CounsellorCards/>} />
+        <Route path="counsellorlist" element={<CounselorList/>} />
+         < Route  path='calendar' element={<CounselorAvailability/>}/>
+         < Route  path='note' element={<CounsellorNote/>}/> 
+              {/* < Route  path='activity' element={<ActivityPage/>}/> */}
+                {/* <Route  path="profile" element={<CounselorProfile/>} /> */}
                  < Route  path='feedback' element={<FeedBack/>}/>
   </Route>
 
      
     {/* Student Protected Route */}
     <Route
-    path="/student"
+    path="/"
     element={
-      <ProtectedRoute allowedRoles={["student"]}>
+      <ProtectedRoute allowedRoles={[""]}>
         <CounsellorLayout />
       </ProtectedRoute>
     }
@@ -78,9 +81,9 @@ function App() {
          <Route  path="profile" element={<CounsellorProfile />} /> 
      < Route  path='joinlive' element={<StudentjoinLive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
-         < Route  path='calendar' element={<Calendar/>}/>
+         < Route  path='calendar' element={<StudentBooking/>}/>
             < Route  path='note' element={<StudentNote/>}/>
-              < Route  path='activity' element={<ActivityPage/>}/>
+              {/* < Route  path='activity' element={<ActivityPage/>}/> */}
                  < Route  path='feedback' element={<FeedBack/>}/>
   </Route>
        

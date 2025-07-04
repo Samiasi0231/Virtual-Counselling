@@ -1,19 +1,20 @@
 import React from 'react';
-
+import { useNavigate } from 'react-router-dom';
 
 const CounselorProfile = () => {
-  return (
-<>
-    <div className="shadow-lg rounded-lg font-sans px-4 sm:px-6 lg:px-8 py-8 w-full max-w-9xl mx-auto">
+  const navigate = useNavigate();
 
+  return (
+    <div className="overflow-auto mx-auto shadow-lg rounded-lg font-sans px-4 sm:px-6 lg:px-8 py-8 w-full bg-white">
+      {/* Avatar + Info */}
       <div className="flex items-center space-x-6">
         <img
-          src="https://via.placeholder.com/150"
-          alt="Counselor"
-          className="w-28 h-28 rounded-full object-cover"
+          src="https://ui-avatars.com/api/?name=Olayemi+Smith&background=4F46E5&color=fff&size=128"
+          alt="Dr. Olayemi Smith"
+          className="w-28 h-28 rounded-full object-cover shadow-md"
         />
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800">Dr. Angela Smith</h2>
+          <h2 className="text-2xl font-semibold text-gray-800">Dr. Olayemi Smith</h2>
           <p className="text-sm text-gray-600">Licensed Clinical Psychologist (Ph.D.)</p>
           <p className="text-sm text-gray-500">New York, NY • 10+ years experience</p>
         </div>
@@ -32,8 +33,8 @@ const CounselorProfile = () => {
       <div className="mt-4">
         <h3 className="text-lg font-medium text-gray-700">Specializations</h3>
         <div className="flex flex-wrap gap-2 mt-2">
-          {["Anxiety & Depression", "Trauma & PTSD", "Adolescent Counseling", "Relationship Issues"].map((item, i) => (
-            <span key={i} className="bg-blue-100 text-blue-700 text-sm px-3 py-1 rounded-full">
+          {["Anxiety & Depression", "Trauma & PTSD", "Adolescent Counseling", "Grief & Loss"].map((item, i) => (
+            <span key={i} className="bg-purple-100 text-purple-600 text-sm px-3 py-1 rounded-full">
               {item}
             </span>
           ))}
@@ -44,15 +45,15 @@ const CounselorProfile = () => {
       <div className="mt-6">
         <h3 className="text-lg font-medium text-gray-700">Statistics</h3>
         <div className="grid grid-cols-3 gap-4 mt-2">
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
+          <div className="bg-gray-50 p-3 rounded-l-lg text-center shadow-sm">
             <h4 className="text-sm font-semibold text-gray-700">Clients</h4>
             <p className="text-gray-600 text-base">34 Active</p>
           </div>
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
+          <div className="bg-gray-50 p-3 rounded-lg text-center shadow-sm">
             <h4 className="text-sm font-semibold text-gray-700">Sessions</h4>
             <p className="text-gray-600 text-base">87 this month</p>
           </div>
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
+          <div className="bg-gray-50 p-3 rounded-lg text-center shadow-sm">
             <h4 className="text-sm font-semibold text-gray-700">Rating</h4>
             <p className="text-yellow-500 text-base">4.9 ★</p>
           </div>
@@ -67,18 +68,20 @@ const CounselorProfile = () => {
 
       {/* Footer Actions */}
       <div className="flex justify-between mt-6 gap-3">
-        <button className="flex-1 bg-blue-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-blue-700">
+        <button
+          className="flex-1 bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-blue-700"
+          onClick={() => navigate('/chat')}
+        >
           Message
         </button>
-        <button className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700">
+        <button
+          className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
+          onClick={() => navigate('/calendar')}
+        >
           Schedule
-        </button>
-        <button className="flex-1 border border-gray-300 text-gray-700 text-sm font-semibold py-2 px-4 rounded hover:bg-gray-100">
-          Edit
         </button>
       </div>
     </div>
-  </>
   );
 };
 

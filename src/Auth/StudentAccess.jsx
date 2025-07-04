@@ -18,7 +18,7 @@ const StudentAccess = () => {
     if (!token || !userType) {
       console.warn("Missing token or user_type");
       setError("Missing credentials.");
-      navigate("/login");
+    navigate("/login")
       return;
     }
 
@@ -60,7 +60,7 @@ const StudentAccess = () => {
         } else if (userType === "counsellor") {
           navigate("/counsellor");
         } else {
-          navigate("/unauthorized");
+          navigate("/login");
         }
         
 
@@ -68,7 +68,7 @@ const StudentAccess = () => {
         console.error("Auth failed:", err?.response?.data || err.message);
         setError("Invalid or expired token.");
         setLoading(false);
-        navigate("/login");
+       navigate("/student")
       }
     };
 
