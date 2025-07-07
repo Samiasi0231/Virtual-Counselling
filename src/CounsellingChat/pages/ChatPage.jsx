@@ -1,10 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
-import { FiSend, FiPaperclip, FiChevronRight } from 'react-icons/fi';
 
-const ChatPage = () => {
+import { FiSend, FiPaperclip, FiChevronRight, FiUser, FiUserX } from 'react-icons/fi';
+
+import { useStateValue } from "../../Context/UseStateValue";
+
+const ChatPage = ({ initialRole = 'student' }) => {
+
+  const [{ student, counsellor }] = useStateValue();
+  const contextUser = student || counsellor;
+  const userType = contextUser?.user_type;
+
+  if (!["student", "counsellor"].includes(userType)) {
+    return <p className="text-center text-red-500">Unauthorized user</p>;
+  }
+
   const [usersOpen, setUsersOpen] = useState(true);
   const [chatsOpen, setChatsOpen] = useState(true);
+
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -14,6 +26,7 @@ const ChatPage = () => {
       time: '9:00 AM',
       date: new Date().toLocaleDateString(),
       read: false,
+      studentAnonymous: false,
     },
   ]);
   const [newMessage, setNewMessage] = useState('');
@@ -21,10 +34,27 @@ const ChatPage = () => {
   const [file, setFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
-  const [user, setUser] = useState({ name: 'You', role: 'student' });
-  const [partner, setPartner] = useState('Counselor');
 
-  const partnersList = ['Counselor', 'Peer1', 'Peer2'];
+  // Your local user state (chat user)
+  const [user, setUser] = useState({
+    name: initialRole === 'student' ? 'You' : 'Counselor',
+    role: initialRole,
+    anonymous: false,
+  });
+
+  const partner = user.role === 'student' ? 'Counselor' : 'Student';
+
+  const partnersList = [partner];
+
+  const toggleAnonymous = () => {
+    if (user.role === 'student') {
+      setUser((prev) => ({
+        ...prev,
+        anonymous: !prev.anonymous,
+        name: !prev.anonymous ? 'Anonymous' : 'You',
+      }));
+    }
+  };   
 
   useEffect(() => {
     if (typing) {
@@ -58,6 +88,7 @@ const ChatPage = () => {
         date: now.toLocaleDateString(),
         file: file ? file.name : null,
         read: false,
+        studentAnonymous: user.role === 'student' ? user.anonymous : false,
       };
       setMessages([...messages, newMsg]);
       setNewMessage('');
@@ -94,8 +125,25 @@ const ChatPage = () => {
     setMessages((prev) => prev.filter((msg) => msg.id !== id));
   };
 
+  const getSenderName = (msg) => {
+    if (msg.sender === user.role) {
+      if (user.role === 'student') {
+        return user.anonymous ? 'Anonymous' : 'You';
+      } else {
+        return 'You';
+      }
+    } else {
+      if (msg.sender === 'student') {
+        return msg.studentAnonymous ? 'Anonymous' : 'Student';
+      } else if (msg.sender === 'counselor') {
+        return 'Counselor';
+      }
+    }
+    return '';
+  };
+
   return (
-    <div className="overflow-auto  mx-auto h-screen flex bg-gray-100">
+    <div className="overflow-auto mx-auto h-screen flex bg-gray-100">
       {/* Left Sidebar */}
       <aside className="w-64 bg-white border-r p-4 space-y-6">
         {/* Users List */}
@@ -106,9 +154,7 @@ const ChatPage = () => {
           >
             <h2 className="text-lg font-semibold text-violet-500">Users</h2>
             <FiChevronRight
-              className={`transition-transform duration-300 ${
-                usersOpen ? 'rotate-90' : ''
-              }`}
+              className={`transition-transform duration-300 ${usersOpen ? 'rotate-90' : ''}`}
             />
           </button>
 
@@ -117,7 +163,7 @@ const ChatPage = () => {
               {partnersList.map((p) => (
                 <li
                   key={p}
-                  onClick={() => setPartner(p)}
+                  onClick={() => {}}
                   className={`p-2 rounded-md cursor-pointer hover:bg-gray-100 ${
                     p === partner ? 'bg-gray-100 font-semibold' : ''
                   }`}
@@ -129,7 +175,6 @@ const ChatPage = () => {
           )}
         </div>
 
-        {/* Recent Chats */}
         <div>
           <button
             onClick={() => setChatsOpen(!chatsOpen)}
@@ -137,31 +182,19 @@ const ChatPage = () => {
           >
             <h2 className="text-lg font-semibold text-violet-500">Recent Chats</h2>
             <FiChevronRight
-              className={`transition-transform duration-300 ${
-                chatsOpen ? 'rotate-90' : ''
-              }`}
+              className={`transition-transform duration-300 ${chatsOpen ? 'rotate-90' : ''}`}
             />
           </button>
 
           {chatsOpen && (
             <ul className="mt-2 space-y-1 text-sm text-gray-600">
-              {partnersList.map((p) => {
-                const last = messages
-                  .filter((m) => m.partner === p)
-                  .slice(-1)[0];
-                return (
-                  <li
-                    key={p}
-                    onClick={() => setPartner(p)}
-                    className="p-2 rounded-md hover:bg-gray-100 cursor-pointer"
-                  >
-                    <strong>{p}:</strong>{' '}
-                    {last
-                      ? last.text.slice(0, 25) + (last.text.length > 25 ? '...' : '')
-                      : 'No messages yet'}
-                  </li>
-                );
-              })}
+              <li className="p-2 rounded-md hover:bg-gray-100 cursor-pointer">
+                <strong>{partner}:</strong>{' '}
+                {messages.length > 0
+                  ? messages[messages.length - 1].text.slice(0, 25) +
+                    (messages[messages.length - 1].text.length > 25 ? '...' : '')
+                  : 'No messages yet'}
+              </li>
             </ul>
           )}
         </div>
@@ -170,22 +203,42 @@ const ChatPage = () => {
       {/* Main Chat Panel */}
       <div className="flex flex-col flex-1 max-w-4xl bg-white shadow-md border-l overflow-hidden">
         {/* Chat Header */}
-        <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-b">
-          <div className="font-semibold text-gray-700">{partner}</div>
-          <select
-            value={partner}
-            onChange={(e) => setPartner(e.target.value)}
-            className="text-sm border p-1 rounded"
-          >
-            {partnersList.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-b">
+  {/* Left: Partner name */}
+  <div className="font-semibold text-gray-700">{partner}</div>
 
-        {/* Messages */}
+  {/* Right: Dropdown + (if student) toggle */}
+  <div className="flex items-center gap-4 ml-auto">
+    <select
+      value={partner}
+      onChange={() => {}}
+      className="text-sm border p-1 rounded bg-white"
+      disabled
+    >
+      <option value={partner}>{partner}</option>
+    </select>
+
+    {user.role === 'student' && (
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-700 flex items-center gap-1">
+          {user.anonymous ? <FiUserX /> : <FiUser />}
+          {user.anonymous ? 'Anonymous' : 'Visible'}
+        </span>
+        <div
+          onClick={toggleAnonymous}
+          className={`w-14 h-7 flex items-center rounded-full px-1 cursor-pointer transition-colors duration-300
+            ${user.anonymous ? 'bg-gray-600' : 'bg-purple-500'}`}
+        >
+          <div
+            className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300
+              ${user.anonymous ? 'translate-x-0' : 'translate-x-7'}`}
+          />
+        </div>
+      </div>
+    )}
+  </div>
+</div>
+     {/* Messages */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
           {messages
             .filter((msg) => msg.partner === partner)
@@ -216,10 +269,7 @@ const ChatPage = () => {
                         >
                           Save
                         </button>
-                        <button
-                          onClick={cancelEdit}
-                          className="text-red-600"
-                        >
+                        <button onClick={cancelEdit} className="text-red-600">
                           Cancel
                         </button>
                       </div>
@@ -227,12 +277,10 @@ const ChatPage = () => {
                   ) : (
                     <>
                       <div className="whitespace-pre-wrap text-sm">
-                        {msg.text}
+                        <strong>{getSenderName(msg)}:</strong> {msg.text}
                       </div>
                       {msg.file && (
-                        <p className="text-xs text-blue-600 mt-1">
-                          📎 {msg.file}
-                        </p>
+                        <p className="text-xs text-blue-600 mt-1">📎 {msg.file}</p>
                       )}
                       <span className="text-[10px] text-gray-500 block mt-1 text-right">
                         {msg.sender !== user.role && msg.read ? '✓✓ ' : '✓ '}
@@ -260,9 +308,7 @@ const ChatPage = () => {
               </div>
             ))}
           {typing && (
-            <div className="text-sm italic text-gray-500">
-              {partner} is typing...
-            </div>
+            <div className="text-sm italic text-gray-500">{partner} is typing...</div>
           )}
         </div>
 
@@ -302,5 +348,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
-

@@ -9,7 +9,6 @@ function StudentMeetLinks({ studentId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API delay with dummy data
     const dummyData = [
       {
         id: '1',
@@ -37,7 +36,6 @@ function StudentMeetLinks({ studentId }) {
       },
     ];
 
-    // Simulate async fetch
     setTimeout(() => {
       setLinks(dummyData);
       setLoading(false);
@@ -124,7 +122,7 @@ function StudentMeetLinks({ studentId }) {
         </ul>
       )}
 
-      {/* Pagination Controls */}
+    
       {totalPages > 1 && (
         <div className="mt-6 flex justify-center items-center gap-4">
           <button

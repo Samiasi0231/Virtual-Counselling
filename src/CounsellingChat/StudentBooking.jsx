@@ -83,7 +83,7 @@ const StudentBooking = () => {
   }
 
   return (
-<div className="mx-auto p-4  bg-white rounded-lg shadow-md border border-gray-200 ">
+<div className="border border-gray-200  overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
   <div className="w-full p-6 space-y-6">
       <div className="flex items-center space-x-4">
         <img

@@ -7,11 +7,11 @@ const LastSessionCard = () => {
   const [notes, setNotes] = useState('');
   const [goals, setGoals] = useState(['']);
 
-  const [students, setStudents] = useState([]);         // list of student options
+  const [students, setStudents] = useState([]);         
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [sendToAll, setSendToAll] = useState(false);     // toggle
+  const [sendToAll, setSendToAll] = useState(false);     
 
-  // Fetch students from backend (you can replace with actual API)
+  
   useEffect(() => {
     async function fetchStudents() {
       try {
@@ -70,7 +70,7 @@ const LastSessionCard = () => {
         📝 Last Session Summary
       </h2>
 
-      {/* Select recipient */}
+      
       <div>
         <label className="block font-medium mb-1">Send To</label>
         <div className="flex items-center gap-2 mb-2">

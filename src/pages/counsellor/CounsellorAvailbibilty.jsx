@@ -63,7 +63,7 @@ const CounselorAvailability = () => {
   };
 
   return (
-   <div className="w-full max-w-5xl mx-auto p-6 bg-white shadow-md border border-gray-200 rounded-xl">
+<div className=" sm:p-6 lg:px-10 py-6 border border-gray-200   overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
   <h2 className="text-2xl font-bold text-gray-800 mb-4">📅 Manage Availability</h2>
 
   {/* Calendar */}

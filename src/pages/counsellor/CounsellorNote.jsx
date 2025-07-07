@@ -46,7 +46,7 @@ function CounselorNoteSharing() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-6 px-4 bg-white shadow-md border border-gray-200 rounded-xl">
+    <div className=" border-gray-200  overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
 
       <h2 className="text-2xl font-semibold text-purple-700 mb-4">Share Notes with Students</h2>
 
