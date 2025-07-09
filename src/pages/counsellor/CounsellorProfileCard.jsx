@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import Avatar from 'react-avatar'; // Fallback avatar component
-import { Link } from 'react-router-dom'; // For client-side navigation
+import Avatar from 'react-avatar'; 
+import { Link } from 'react-router-dom'; 
 
 const CounsellorProfileCard = () => {
-  // Get user type from localStorage (either 'student' or 'counsellor')
+  
   const storedUserType = localStorage.getItem("user_type");
   const allowedUserTypes = ["student", "counsellor"];
   const userType = allowedUserTypes.includes(storedUserType) ? storedUserType : null;
 
-  // Dummy data for 6 counselors
   const [counselors, setCounselors] = useState(
     Array.from({ length: 6 }).map((_, i) => ({
       id: i,
@@ -21,7 +20,6 @@ const CounsellorProfileCard = () => {
     }))
   );
 
-  // Handle uploading an image to override the avatar
   const handleImageUpload = (e, index) => {
     const file = e.target.files[0];
     if (file) {
@@ -72,8 +70,7 @@ const CounsellorProfileCard = () => {
     </div>
   </div>
 </div>
-
-            {/* Specialties */}
+  {/* Specialties */}
             <div>
               <p className="text-sm font-medium text-gray-800 mb-2">Specialties:</p>
               <div className="flex flex-wrap gap-2">
@@ -102,7 +99,7 @@ const CounsellorProfileCard = () => {
             <div className="pt-2">
               <button className="w-full bg-purple-500 hover:bg-purple-700 text-white text-sm font-semibold py-2 rounded-lg">
                   <Link
-                to={userType ? `/${userType}/profile` : "/unauthorized"}
+                to={userType ? `/${userType}/Counsellor/profile` : "/unauthorized"}
               >
                 View profile <span>→</span>
               </Link>

@@ -33,7 +33,6 @@ function App() {
 
   return (
     <>
- 
 <UserRehydrator/>
       <Routes>
 
@@ -46,9 +45,9 @@ function App() {
          
           {/* counsellor Protected Route */}
     <Route
-    path="/student"
+    path="/counsellor"
     element={
-      <ProtectedRoute allowedRoles={["student"]}>
+      <ProtectedRoute allowedRoles={["counsellor"]}>
         <CounsellorLayout />
       </ProtectedRoute>
     }
@@ -57,7 +56,7 @@ function App() {
      < Route  path='joinlive' element={<Counsellorjoinlive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
        <Route exact path="counsellor/card" element={<CounsellorCards/>} />
-        <Route path="counsellorlist" element={<CounselorList/>} />
+        <Route path="counsellor/list" element={<CounselorList/>} />
          < Route  path='calendar' element={<CounselorAvailability/>}/>
          < Route  path='note' element={<CounsellorNote/>}/> 
               {/* < Route  path='activity' element={<ActivityPage/>}/> */}
@@ -68,17 +67,17 @@ function App() {
      
     {/* Student Protected Route */}
     <Route
-    path="/"
+    path="/student"
     element={
-      <ProtectedRoute allowedRoles={[""]}>
+      <ProtectedRoute allowedRoles={["student"]}>
         <CounsellorLayout />
       </ProtectedRoute>
     }
   >
     <Route index element={<Dashboard />} />
-    <Route path="counsellorlist" element={<CounselorList/>} />
+    <Route path="counsellor/list" element={<CounselorList/>} />
      <Route exact path="counsellor/card" element={<CounsellorCards/>} />
-         <Route  path="profile" element={<CounsellorProfile />} /> 
+         <Route  path="Counsellor/profile" element={<CounsellorProfile />} /> 
      < Route  path='joinlive' element={<StudentjoinLive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
          < Route  path='calendar' element={<StudentBooking/>}/>
@@ -86,11 +85,7 @@ function App() {
               {/* < Route  path='activity' element={<ActivityPage/>}/> */}
                  < Route  path='feedback' element={<FeedBack/>}/>
   </Route>
-       
-
       </Routes>
-    
-
     </>
   );
 }

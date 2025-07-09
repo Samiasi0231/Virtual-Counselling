@@ -56,7 +56,7 @@ function Dashboard() {
 
             <div className="grid grid-cols-12 gap-6">
  {/* counsellor cards */}
- {userType ==="student"&&(
+ {userType ==="counsellor"&&(
   <>
     <DashboardCard01 />
    <DashboardCard02 />

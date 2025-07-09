@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from 'react-avatar';
 import { useStateValue } from "../../Context/UseStateValue";
+import axiosClient from "../../utils/axios-client-analytics";
+
 function CounselorList() {
   const [{ student, counsellor }] = useStateValue();
   const user = student || counsellor;
@@ -10,42 +12,24 @@ function CounselorList() {
   const [counselors, setCounselors] = useState([]);
 
   useEffect(() => {
-    
-    const dummyCounselors = [
-      {
-        id: 1,
-        fullName: 'Mr. James Oladele',
-        role: 'Counselor',
-        status: 'Active',
-        profileImage: '',
-      },
-      {
-        id: 2,
-        fullName: 'Mrs. Linda Okoro',
-        role: 'Counselor',
-        status: 'Offline',
-        profileImage: '',
-      },
-      {
-        id: 3,
-        fullName: 'Dr. Yusuf Ibrahim',
-        role: 'Counselor',
-        status: 'Active',
-        profileImage: '',
-      },
-    ];
-    setCounselors(dummyCounselors);
-  }, []);
+    const fetchCounselors = async () => {
+      try {
+        const res = await axiosClient.get("/vpc/get-counselors/");
+        const formatted = res.data.map((counselor) => ({
+          id: counselor.item_id,
+          fullName: counselor.fullname,
+          profileImage: counselor.avatar,
+          status: counselor.onlineStatus ? "Active" : "Offline",
+          role: "Counselor",
+        }));
+        setCounselors(formatted);
+      } catch (err) {
+        console.error("Failed to fetch counselors", err);
+      }
+    };
 
-  const handleImageUpload = (e, index) => {
-    const file = e.target.files[0];
-    if (file) {
-      const newImageUrl = URL.createObjectURL(file);
-      const updated = [...counselors];
-      updated[index].profileImage = newImageUrl;
-      setCounselors(updated);
-    }
-  };
+    fetchCounselors();
+  }, []);
 
   return (
     <div className="overflow-x-auto bg-white shadow rounded-lg p-4">
@@ -68,35 +52,26 @@ function CounselorList() {
               </td>
             </tr>
           ) : (
-            counselors.map((counselor, index) => (
+            counselors.map((counselor) => (
               <tr
                 key={counselor.id}
                 className="border-b hover:bg-gray-50 transition duration-200"
               >
                 <td className="px-4 py-2">
-                  <label htmlFor={`upload-${index}`} className="cursor-pointer group relative">
-                    {counselor.profileImage?.trim() ? (
-                      <img
-                        src={counselor.profileImage}
-                        alt={counselor.fullName}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <Avatar
-                        name={counselor.fullName}
-                        size="40"
-                        round={true}
-                        className="inline-block"
-                      />
-                    )}
-                    <input
-                      id={`upload-${index}`}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleImageUpload(e, index)}
+                  {counselor.profileImage ? (
+                    <img
+                      src={counselor.profileImage}
+                      alt={counselor.fullName}
+                      className="w-10 h-10 rounded-full object-cover"
                     />
-                  </label>
+                  ) : (
+                    <Avatar
+                      name={counselor.fullName}
+                      size="40"
+                      round={true}
+                      className="inline-block"
+                    />
+                  )}
                 </td>
                 <td className="px-4 py-2 font-medium text-gray-800">{counselor.fullName}</td>
                 <td className="px-4 py-2 text-gray-600">{counselor.role}</td>
@@ -108,7 +83,7 @@ function CounselorList() {
                   ></span>
                   {counselor.status === 'Active' ? 'Online' : 'Offline'}
                 </td>
-               <td className="px-4 py-2">
+                <td className="px-4 py-2">
                   <Link
                     to={userType ? `/${userType}/counsellor/card` : "/unauthorized"}
                     className="text-purple-600 hover:underline text-sm"
@@ -126,3 +101,4 @@ function CounselorList() {
 }
 
 export default CounselorList;
+
