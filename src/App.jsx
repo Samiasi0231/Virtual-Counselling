@@ -4,7 +4,6 @@ import './css/style.css';
 import Login from "./components/login/Login"
 import ProtectedRoute from './protectedroute/ProtectedRoute';
 import UserRehydrator from './utils/UserRedrator';
-import CounsellorAccess from './Auth/CounsellorAccess';
 import StudentAccess from './Auth/StudentAccess';
 import CounsellorLayout from './layout/Layout';
 import Dashboard from './pages/Dashboard';
@@ -77,8 +76,8 @@ function App() {
     <Route index element={<Dashboard />} />
     <Route path="counsellor/list" element={<CounselorList/>} />
      <Route exact path="counsellor/card" element={<CounsellorCards/>} />
-         <Route  path="Counsellor/profile" element={<CounsellorProfile />} /> 
-     < Route  path='joinlive' element={<StudentjoinLive/>}/> 
+         <Route  path="Counsellor/profile/:id" element={<CounsellorProfile />} /> 
+     < Route path='joinlive' element={<StudentjoinLive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
          < Route  path='calendar' element={<StudentBooking/>}/>
             < Route  path='note' element={<StudentNote/>}/>

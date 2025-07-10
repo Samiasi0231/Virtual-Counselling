@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Avatar from 'react-avatar';
+import axiosClient from '../../utils/axios-client-analytics';
 
 function CounselorList() {
   const [counselors, setCounselors] = useState([]);
