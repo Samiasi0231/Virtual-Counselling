@@ -36,7 +36,7 @@ const CounselorProfile = () => {
       <div className="flex items-center space-x-6">
         <img
           src={
-            counselor.avatar ||
+            counselor.profilePhoto?.best ||
             `https://ui-avatars.com/api/?name=${encodeURIComponent(
               counselor.fullname
             )}&background=4F46E5&color=fff&size=128`

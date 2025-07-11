@@ -11,25 +11,30 @@ function CounselorList() {
 
   const [counselors, setCounselors] = useState([]);
 
-  useEffect(() => {
-    const fetchCounselors = async () => {
-      try {
-        const res = await axiosClient.get("/vpc/get-counselors/");
-        const formatted = res.data.map((counselor) => ({
-          id: counselor.item_id,
-          fullName: counselor.fullname,
-          profileImage: counselor.avatar,
-          status: counselor.onlineStatus ? "Active" : "Offline",
-          role: "Counselor",
-        }));
-        setCounselors(formatted);
-      } catch (err) {
-        console.error("Failed to fetch counselors", err);
-      }
-    };
+useEffect(() => {
+  const fetchCounselors = async () => {
+    try {
+      const res = await axiosClient.get("/vpc/get-counselors/");
+      const formatted = res.data.map((counselor) => ({
+        id: counselor.item_id,
+        fullName: counselor.fullname,
+        profileImage:
+          counselor.profilePhoto?.best ||
+          counselor.profilePhoto?.medium ||
+          counselor.avatar ||
+          null,
+        status: counselor.onlineStatus ? "Active" : "Offline",
+        role: "Counselor",
+      }));
+      setCounselors(formatted);
+    } catch (err) {
+      console.error("Failed to fetch counselors", err);
+    }
+  };
 
-    fetchCounselors();
-  }, []);
+  fetchCounselors();
+}, []);
+
 
   return (
     <div className="overflow-x-auto bg-white shadow rounded-lg p-4">

@@ -31,9 +31,9 @@ const CounsellorProfileCard = () => {
         {counselors.map((counselor, index) => (
           <div key={counselor.item_id} className="bg-white shadow-md rounded-xl p-6 space-y-4">
             <div className="flex items-center gap-4">
-              {counselor.avatar ? (
+              {counselor.profilePhoto?.best ? (
                 <img
-                  src={counselor.avatar}
+                  src={counselor.profilePhoto.best}
                   alt={counselor.fullname}
                   className="w-12 h-12 rounded-full object-cover border border-gray-300"
                 />
