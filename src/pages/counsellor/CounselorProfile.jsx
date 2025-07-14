@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axiosClient from "../../utils/axios-client-analytics";
+import axiosClient from '../../utils/axios-client-analytics';
 
 const CounselorProfile = () => {
-  const { id } = useParams(); // get mentor_id from URL
+  const { id } = useParams(); // counselor_id from URL
   const navigate = useNavigate();
   const [counselor, setCounselor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [startingChat, setStartingChat] = useState(false);
 
   useEffect(() => {
     const fetchCounselor = async () => {
       try {
         const res = await axiosClient.get(`/vpc/get-counselor/${id}/`, {
           headers: {
-            Authorization: `Bearer YOUR_TOKEN_HERE`, 
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
           },
         });
         setCounselor(res.data);
@@ -27,12 +28,36 @@ const CounselorProfile = () => {
     fetchCounselor();
   }, [id]);
 
+  const handleStartChat = async () => {
+    setStartingChat(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await axiosClient.post(`/vpc/start-chat/${id}/`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const chatId = res.data?.item_id;
+      if (chatId) {
+        navigate(`/student/chat?chatId=${chatId}`);
+      } else {
+        alert('Unable to start chat. Please try again.');
+      }
+    } catch (err) {
+      console.error("Start chat error:", err);
+      alert("An error occurred while starting chat.");
+    } finally {
+      setStartingChat(false);
+    }
+  };
+
   if (loading) return <div className="text-center py-10">Loading profile...</div>;
   if (!counselor) return <div className="text-center text-red-500">Counselor not found.</div>;
 
   return (
     <div className="overflow-auto mx-auto shadow-lg rounded-lg font-sans px-4 sm:px-6 lg:px-8 py-8 w-full bg-white">
-      {/* Avatar + Info */}
+      {/* Avatar + Basic Info */}
       <div className="flex items-center space-x-6">
         <img
           src={
@@ -46,21 +71,15 @@ const CounselorProfile = () => {
         />
         <div>
           <h2 className="text-2xl font-semibold text-gray-800">{counselor.fullname}</h2>
-          <p className="text-sm text-gray-600">
-            {counselor.professional_summary || "Certified Counselor"}
-          </p>
-          <p className="text-sm text-gray-500">
-            {counselor.city || "No city provided"}
-          </p>
+          <p className="text-sm text-gray-600">{counselor.professional_summary || "Certified Counselor"}</p>
+          <p className="text-sm text-gray-500">{counselor.city || "No city provided"}</p>
         </div>
       </div>
 
-      {/* Bio */}
+      {/* About */}
       <div className="mt-6">
         <h3 className="text-lg font-medium text-gray-700">About</h3>
-        <p className="text-gray-600 mt-1 text-sm">
-          {counselor.bio || "No bio available."}
-        </p>
+        <p className="text-gray-600 mt-1 text-sm">{counselor.bio || "No bio available."}</p>
       </div>
 
       {/* Specializations */}
@@ -82,7 +101,7 @@ const CounselorProfile = () => {
         </div>
       </div>
 
-      {/* Statistics (Optional Placeholder Data) */}
+      {/* Statistics */}
       <div className="mt-6">
         <h3 className="text-lg font-medium text-gray-700">Statistics</h3>
         <div className="grid grid-cols-3 gap-4 mt-2">
@@ -109,21 +128,24 @@ const CounselorProfile = () => {
         </p>
       </div>
 
-      {/* Footer Actions */}
+      {/* Action Buttons */}
       <div className="flex justify-between mt-6 gap-3">
-       <button
-          className="flex-1 bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-blue-700"
-          onClick={() => navigate('/student/chat')}
-       >
-          Message
-        </button>
-      <button
-          className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
-        onClick={() => navigate('/student/calendar')}
+        <button
+          className={`flex-1 bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-blue-700 ${
+            startingChat ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
+          onClick={handleStartChat}
+          disabled={startingChat}
         >
-         Schedule
+          {startingChat ? 'Starting...' : 'Message'}
         </button>
-       </div> 
+        <button
+          className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
+          onClick={() => navigate('/student/calendar')}
+        >
+          Schedule
+        </button>
+      </div>
     </div>
   );
 };

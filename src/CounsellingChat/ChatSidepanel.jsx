@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import axiosClient from "../utils/axios-client-analytics";
 import { FiChevronRight } from "react-icons/fi";
 
-const ChatSidepanel = ({ onChatSelect, partner, isStudent }) => {
+const ChatSidepanel = ({ onChatSelect, partner, isStudent,  activeChatId }) => {
   const [recentChats, setRecentChats] = useState([]);
-  const [activeChatId, setActiveChatId] = useState(null);
+ 
+  const [searchTerm, setSearchTerm] = useState('');
   const [usersOpen, setUsersOpen] = useState(true);
   const [chatsOpen, setChatsOpen] = useState(true);
 
@@ -21,42 +22,54 @@ const ChatSidepanel = ({ onChatSelect, partner, isStudent }) => {
     fetchRecentChats();
   }, []);
 
-const handleChatSelect = async (chatId) => {
-  setActiveChatId(chatId);
+  const filteredChats = recentChats.filter((chat) => {
+    const partnerData = isStudent ? chat.counselor_data : chat.user_data;
+    const fullname = partnerData?.fullname || `${partnerData?.firstname || ""} ${partnerData?.lastname || ""}`.trim();
+    return fullname.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
-  try {
-    const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`);
-    const data = res.data;
+  const handleChatSelect = async (chatId) => {
+    
 
-    const chat = recentChats.find((c) => c.item_id === chatId);
+    try {
+      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`);
+      const data = res.data;
 
-    const partnerData = isStudent
-      ? data.counselor_data || chat?.counselor_data
-      : data.user_data || chat?.user_data;
-onChatSelect(
-  data.fullMessages || data.messages || [],
-  partnerData,
-  data.messages || [],
-  {
-    item_id: chatId,
-    user_anonymous: chat.user_anonymous ?? false,
-  }
-);
+      const chat = recentChats.find((c) => c.item_id === chatId);
+      const partnerData = isStudent
+        ? data.counselor_data || chat?.counselor_data
+        : data.user_data || chat?.user_data;
 
-  } catch (err) {
-    console.error("Error fetching chat messages:", err);
-  }
-};
-
-
+      onChatSelect(
+        data.fullMessages || data.messages || [],
+        partnerData,
+        data.messages || [],
+        {
+          item_id: chatId,
+          user_anonymous: chat.user_anonymous ?? false,
+        }
+      );
+    } catch (err) {
+      console.error("Error fetching chat messages:", err);
+    }
+  };
 
   return (
-    <aside className="w-64 bg-white border-r p-4 space-y-6">
-      {/* Users Section (can be removed if not used) */}
+    <aside className="w-full md:w-64 bg-white border-r p-4 space-y-4 h-full overflow-y-auto">
+      {/* 🔍 Search input for mobile/desktop */}
+      <input
+        type="text"
+        placeholder="Search chats..."
+        className="w-full p-2 border rounded text-sm"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
+      {/* Users (optional) */}
       <div>
         <button
           onClick={() => setUsersOpen(!usersOpen)}
-          className="flex items-center justify-between w-full text-left"
+          className="flex items-center justify-between w-full text-left mt-2"
         >
           <h2 className="text-lg font-semibold text-violet-500">Users</h2>
           <FiChevronRight
@@ -85,7 +98,7 @@ onChatSelect(
         )}
       </div>
 
-      {/* Recent Chats Section */}
+      {/* ✅ Recent Chats with toggle */}
       <div>
         <button
           onClick={() => setChatsOpen(!chatsOpen)}
@@ -96,12 +109,13 @@ onChatSelect(
             className={`transition-transform duration-300 ${chatsOpen ? "rotate-90" : ""}`}
           />
         </button>
+
         {chatsOpen && (
           <ul className="mt-2 space-y-1 text-sm text-gray-600">
-            {recentChats.length === 0 ? (
+            {filteredChats.length === 0 ? (
               <li className="p-2 text-gray-400">No recent chats</li>
             ) : (
-              recentChats.map((chat) => {
+              filteredChats.map((chat) => {
                 const partnerData = isStudent ? chat.counselor_data : chat.user_data;
                 const fullname =
                   partnerData?.fullname ||
