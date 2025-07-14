@@ -33,13 +33,16 @@ const handleChatSelect = async (chatId) => {
     const partnerData = isStudent
       ? data.counselor_data || chat?.counselor_data
       : data.user_data || chat?.user_data;
+onChatSelect(
+  data.fullMessages || data.messages || [],
+  partnerData,
+  data.messages || [],
+  {
+    item_id: chatId,
+    user_anonymous: chat.user_anonymous ?? false,
+  }
+);
 
-    onChatSelect(
-      data.fullMessages || data.messages || [],
-      partnerData,
-      data.messages || [],
-      { item_id: chatId } 
-    );
   } catch (err) {
     console.error("Error fetching chat messages:", err);
   }

@@ -7,40 +7,46 @@ function CounselorList() {
   const [counselors, setCounselors] = useState([]);
   const [userType, setUserType] = useState(null);
 
-  useEffect(() => {
-    const storedUserType = localStorage.getItem("user_type");
-    const allowedUserTypes = ["student", "counsellor"];
-    const resolvedUserType = allowedUserTypes.includes(storedUserType)
-      ? storedUserType
-      : null;
-    setUserType(resolvedUserType);
+useEffect(() => {
+  const storedUserType = localStorage.getItem("user_type");
+  const allowedUserTypes = ["student", "counsellor"];
+  const resolvedUserType = allowedUserTypes.includes(storedUserType)
+    ? storedUserType
+    : null;
+  setUserType(resolvedUserType);
 
-    const dummyCounselors = [
-      {
-        id: 1,
-        fullName: 'Mr. James Oladele',
-        role: 'Counselor',
-        status: 'Active',
-        profileImage: '',
-      },
-      {
-        id: 2,
-        fullName: 'Mrs. Linda Okoro',
-        role: 'Counselor',
-        status: 'Offline',
-        profileImage: '',
-      },
-      {
-        id: 3,
-        fullName: 'Dr. Yusuf Ibrahim',
-        role: 'Counselor',
-        status: 'Active',
-        profileImage: '',
-      },
-    ];
-    setCounselors(dummyCounselors);
-  }, []);
+  const fetchCounselors = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await axiosClient.get('/vpc/get-counselors/', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      const data = response.data;
+      const formatted = Array.isArray(data)
+        ? data.map((counsellor) => ({
+            id: counsellor.item_id,
+            fullName: counsellor.fullname,
+            role: counsellor.isCounsellor ? 'Counselor' : 'User',
+            status: counsellor.onlineStatus ? 'Active' : 'Offline',
+            profileImage: counsellor.profilePhoto?.best || '',
+          }))
+        : [];
+
+      setCounselors(formatted);
+    } catch (error) {
+      console.error('Error fetching counselors:', {
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error.message,
+      });
+    }
+  };
+
+  fetchCounselors();
+}, []);
   const handleImageUpload = (e, index) => {
     const file = e.target.files[0];
     if (file) {
@@ -57,7 +63,7 @@ function CounselorList() {
 
       <div className="overflow-x-auto w-full">
         <table className="min-w-[600px] w-full table-auto text-left text-sm">
-          <thead className="border-b bg-gray-100">
+          <thead className="border-b bg-purple-300">
             <tr>
               <th className="px-4 py-2">Profile</th>
               <th className="px-4 py-2">Full Name</th>
