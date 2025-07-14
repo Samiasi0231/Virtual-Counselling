@@ -4,7 +4,6 @@ import { FiChevronRight } from "react-icons/fi";
 
 const ChatSidepanel = ({ onChatSelect, partner, isStudent,  activeChatId }) => {
   const [recentChats, setRecentChats] = useState([]);
- 
   const [searchTerm, setSearchTerm] = useState('');
   const [usersOpen, setUsersOpen] = useState(true);
   const [chatsOpen, setChatsOpen] = useState(true);

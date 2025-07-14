@@ -27,12 +27,16 @@ const getAnonymousForChat = (chatId) => {
 };
 
 const ChatPage = ({ initialRole = 'student' }) => {
+  const websocketRef = useRef(null);
   const location = useLocation();
   const chatIdFromURL = new URLSearchParams(location.search).get('chatId');
-  const [{ student, counsellor }] = useStateValue();
+  const [{ student, counsellor, studentToken, counsellorToken }] = useStateValue();
+
   const contextUser = student || counsellor;
   const userType = contextUser?.user_type;
+  const token = userType === 'student' ? studentToken : counsellorToken;
   const isStudent = userType === 'student';
+
   const [unreadIds, setUnreadIds] = useState([]);
   const [chatSession, setChatSession] = useState(null);
   const [partnerInfo, setPartnerInfo] = useState(null);
@@ -44,37 +48,26 @@ const ChatPage = ({ initialRole = 'student' }) => {
   const [mobileView, setMobileView] = useState(() => !chatIdFromURL);
   const messagesEndRef = useRef(null);
 
-  const currentUserName = `${contextUser?.firstname || ''} ${contextUser?.lastname || ''}`.trim();
   const normalizeProfilePhoto = (photo) => typeof photo === 'object' ? photo?.best : photo;
 
   const isStudentAnonymous = chatSession?.user_anonymous;
 
-const displayName = (() => {
-  // If the user is a student, they should always see their counselor's name
-  if (isStudent) {
-    return partnerInfo?.fullname || `${partnerInfo?.firstname || ''} ${partnerInfo?.lastname || ''}`.trim() || 'Counselor';
-  }
+  const displayName = (() => {
+    if (isStudent) {
+      return partnerInfo?.fullname || `${partnerInfo?.firstname || ''} ${partnerInfo?.lastname || ''}`.trim() || 'Counselor';
+    }
+    if (!isStudent) {
+      return isStudentAnonymous ? 'Anonymous' : partnerInfo?.fullname || `${partnerInfo?.firstname || ''} ${partnerInfo?.lastname || ''}`.trim() || 'Student';
+    }
+    return 'Unknown';
+  })();
 
-  // If the user is a counselor, and student is anonymous
-  if (!isStudent) {
-    return isStudentAnonymous ? 'Anonymous' : partnerInfo?.fullname || `${partnerInfo?.firstname || ''} ${partnerInfo?.lastname || ''}`.trim() || 'Student';
-  }
-
-  return 'Unknown';
-})();
-const displayAvatar = (() => {
-  const photo = normalizeProfilePhoto(partnerInfo?.profilePhoto) || partnerInfo?.avatar || null;
-
-  if (isStudent) {
-    return photo; // Always show counselor's avatar
-  }
-
-  if (!isStudent) {
-    return isStudentAnonymous ? null : photo;
-  }
-
-  return null;
-})();
+  const displayAvatar = (() => {
+    const photo = normalizeProfilePhoto(partnerInfo?.profilePhoto) || partnerInfo?.avatar || null;
+    if (isStudent) return photo;
+    if (!isStudent) return isStudentAnonymous ? null : photo;
+    return null;
+  })();
 
   if (!['student', 'counsellor'].includes(userType)) {
     return <p className="text-center text-red-500">Unauthorized user</p>;
@@ -106,9 +99,8 @@ const displayAvatar = (() => {
 
   useEffect(() => {
     const fetchChatFromQueryParam = async () => {
-      if (!chatIdFromURL) return;
+      if (!chatIdFromURL || !token) return;
       try {
-        const token = localStorage.getItem('auth_token');
         const res = await axiosClient.get(`/vpc/get-messages/${chatIdFromURL}/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -133,7 +125,7 @@ const displayAvatar = (() => {
       }
     };
     fetchChatFromQueryParam();
-  }, [chatIdFromURL, isStudent, userType]);
+  }, [chatIdFromURL, isStudent, userType, token]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -142,9 +134,8 @@ const displayAvatar = (() => {
   }, [messages]);
 
   const toggleAnonymous = async () => {
-    if (!isStudent || !chatSession?.item_id) return;
+    if (!isStudent || !chatSession?.item_id || !token) return;
     const chatId = chatSession.item_id;
-    const token = localStorage.getItem('auth_token');
     const newAnonymousState = !anonymous;
     try {
       const response = await axiosClient.put(
@@ -163,17 +154,100 @@ const displayAvatar = (() => {
     }
   };
 
+  useEffect(() => {
+    if (!chatSession?.item_id || !token) return;
+
+    const wsUrl = `wss://cbt.neofin.ng/vpc/message-feed/${chatSession.item_id}/ws?auth_token=${token}`;
+    const ws = new WebSocket(wsUrl);
+    websocketRef.current = ws;
+
+    ws.onopen = () => console.log('[WebSocket] Connected');
+    ws.onerror = (e) => console.error('[WebSocket] Error:', e);
+    ws.onclose = () => console.log('[WebSocket] Disconnected');
+
+   ws.onmessage = (event) => {
+  try {
+    const data = JSON.parse(event.data);
+    console.log('[WebSocket Payload]', data);
+
+    if (data.media?.length) {
+      console.log('[WebSocket Incoming Media]', data.media);
+    }
+
+    if (data?.text && data?.item_id) {
+      const now = new Date();
+      const sender = data.sender || (data.from_counselor ? 'counsellor' : 'student');
+      const isFromCurrentUser = sender === userType;
+
+      const newMsg = {
+        id: data.item_id || now.getTime(),
+        sender,
+        text: data.text,
+        file: data.media?.[0]?.url || null,
+        fileType: data.media?.[0]?.type || null,
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: now.toLocaleDateString(),
+        read: false,
+        studentAnonymous: data.anonymous ?? false,
+        isFromCurrentUser,
+      };
+
+      console.log('[Adding Message]', newMsg);
+
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (msg) => !(msg.id?.startsWith('temp') && msg.text === data.text)
+        );
+        return [...filtered, newMsg];
+      });
+    }
+
+    if (data?.type === 'typing' && data.sender !== userType) {
+      setTyping(data);
+      setTimeout(() => setTyping(false), 1500);
+    }
+  } catch (err) {
+    console.error('[WebSocket] Parse error:', err);
+  }
+};
+
+
+    return () => {
+      ws.close();
+    };
+  }, [chatSession?.item_id, userType, token]);
+
   const handleSend = async () => {
-    if (!newMessage.trim() && !file) return;
-    const chatroomId = chatSession?.item_id;
-    if (!chatroomId) return;
+    if ((!newMessage.trim() && !file) || !chatSession?.item_id || !token) return;
+
+    const now = new Date();
+    const tempId = `temp-${Date.now()}`;
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: tempId,
+        sender: userType,
+        text: newMessage,
+        date: now.toLocaleDateString(),
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        file: file ? URL.createObjectURL(file) : null,
+        read: false,
+        studentAnonymous: isStudent ? anonymous : false,
+      },
+    ]);
+
+    setNewMessage('');
+    setFile(null);
+    setTyping(false);
+
     try {
       const formData = new FormData();
       if (newMessage.trim()) formData.append('text', newMessage.trim());
       if (file) formData.append('file', file);
-      const token = localStorage.getItem('auth_token');
-      const response = await axiosClient.post(
-        `/vpc/create-message/${chatroomId}/`,
+   if (file) formData.append('media', file);
+      await axiosClient.post(
+        `/vpc/create-message/${chatSession.item_id}/`,
         formData,
         {
           headers: {
@@ -182,45 +256,19 @@ const displayAvatar = (() => {
           },
         }
       );
-      const result = response.data;
-      const now = new Date();
-      const BASE_MEDIA_URL = 'https://your-domain.com/media/';
-      const mediaUrl = result.media?.[0]
-        ? result.media[0].startsWith('http')
-          ? result.media[0]
-          : `${BASE_MEDIA_URL}${result.media[0]}`
-        : null;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: result.item_id,
-          sender: userType,
-          partner,
-          text: result.text,
-          time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: now.toLocaleDateString(),
-          file: mediaUrl,
-          read: false,
-          studentAnonymous: isStudent ? anonymous : false,
-        },
-      ]);
-      setNewMessage('');
-      setFile(null);
-      setTyping(false);
     } catch (error) {
-      console.error('Failed to send message', error.response?.data || error.message);
+      console.error('Message send failed:', error.response?.data || error.message);
     }
   };
 
   const getSenderName = (msg) => {
-    if (msg.sender === userType) {
-      return userType === 'student' ? (anonymous ? 'Anonymous' : 'You') : 'You';
-    } else {
-      if (msg.sender === 'student') return msg.studentAnonymous ? 'Anonymous' : 'Student';
-      if (msg.sender === 'counselor') return 'Counselor';
-    }
-    return '';
+    if (msg.isFromCurrentUser) return isStudent ? (anonymous ? 'Anonymous' : 'You') : 'You';
+    if (msg.sender === 'student') return msg.studentAnonymous ? 'Anonymous' : 'Student';
+    if (msg.sender === 'counsellor') return 'Counsellor';
+    return 'Unknown';
   };
+
+
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-gray-100">
@@ -280,31 +328,51 @@ const displayAvatar = (() => {
           )}
         </div>
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
-          {messages
-            .filter((msg) => msg.partner === partner)
-            .map((msg) => (
-              <div key={msg.id} className={`flex ${msg.sender === userType ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`p-3 rounded-2xl max-w-xs transition-all duration-300 ${
-                    msg.sender === userType ? 'bg-green-100' : 'bg-white border'
-                  } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
-                >
-                  <div className="whitespace-pre-wrap text-sm">
-                    <strong>{getSenderName(msg)}:</strong> {msg.text}
-                  </div>
-                  {msg.file && <p className="text-xs text-blue-600 mt-1">📎 {msg.file}</p>}
-                  <span className="text-[10px] text-gray-500 block mt-1 text-right">
-                    {msg.sender !== userType && msg.read ? '✓✓ ' : '✓ '}
-                    {msg.time} | {msg.date}
-                  </span>
-                </div>
-              </div>
-            ))}
-          {typing && (
-            <div className="text-sm italic text-gray-500">
-              {(isStudent && anonymous ? 'Anonymous' : currentUserName || 'User')} is typing...
-            </div>
-          )}
+{messages.map((msg) => (
+  <div key={msg.id} className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'}`}>
+    <div
+      className={`p-3 rounded-2xl max-w-xs transition-all duration-300 
+        ${msg.isFromCurrentUser ? 'bg-green-100' : 'bg-white border'} 
+        ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
+    >
+      <div className="whitespace-pre-wrap text-sm">
+        <strong>{getSenderName(msg)}:</strong> {msg.text}
+      </div>
+    {msg.file && (
+  <>
+    {msg.fileType === 'image' ? (
+      <img
+        src={msg.file}
+        alt="Uploaded"
+        className="mt-2 rounded max-w-xs max-h-40 object-cover"
+      />
+    ) : (
+      <p className="text-xs text-blue-600 mt-1 break-all">
+        📎 <a href={msg.file} target="_blank" rel="noopener noreferrer">{msg.file}</a>
+      </p>
+    )}
+  </>
+)}
+
+      <span className="text-[10px] text-gray-500 block mt-1 text-right">
+        {msg.isFromCurrentUser ? '✓' : (msg.read ? '✓✓' : '✓')} {msg.time} | {msg.date}
+      </span>
+    </div>
+  </div>
+))}
+
+{typing && typing.sender && typing.sender !== userType && (
+  <div className="text-sm italic text-gray-500">
+    {typing.sender === 'student'
+      ? (typing.anonymous ? 'Anonymous' : 'Student')
+      : 'Counsellor'} is typing...
+  </div>
+)}
+
+
+
+
+
           <div ref={messagesEndRef} />
         </div>
         <div className="flex flex-col px-4 py-3 border-t bg-white gap-2">
@@ -319,32 +387,62 @@ const displayAvatar = (() => {
               </button>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <label htmlFor="file-upload" className="cursor-pointer text-gray-500">
-              <FiPaperclip size={20} />
-            </label>
-            <input
-              id="file-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files[0])}
-            />
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => {
-                setNewMessage(e.target.value);
-                setTyping(true);
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type a message..."
-              className="flex-1 px-4 py-2 text-sm border rounded-full focus:outline-none focus:ring-1 focus:ring-purple-500"
-            />
-            <button onClick={handleSend} className="text-purple-700 hover:text-purple-900">
-              <FiSend size={20} />
-            </button>
-          </div>
+       <div className="flex items-center gap-2">
+  {/* File Upload Icon */}
+  <label htmlFor="file-upload" className="cursor-pointer text-gray-500">
+    <FiPaperclip size={20} />
+  </label>
+
+  {/* Hidden File Input */}
+  <input
+    id="file-upload"
+    type="file"
+    accept="image/*"
+    className="hidden"
+  onChange={(e) => {
+  const selected = e.target.files[0];
+  console.log('[Selected Image File]', selected);
+  setFile(selected);
+}}
+  />
+
+  {/* Chat Text Input with WebSocket Typing Event */}
+  <input
+    type="text"
+    value={newMessage}
+ onChange={(e) => {
+  const value = e.target.value;
+  setNewMessage(value);
+  setTyping(true);
+
+  if (
+    websocketRef.current &&
+    websocketRef.current.readyState === WebSocket.OPEN &&
+    chatSession?.item_id
+  ) {
+    websocketRef.current.send(
+      JSON.stringify({
+        type: 'typing',
+        sender: userType,
+        chatId: chatSession.item_id,
+        anonymous: isStudent ? anonymous : false,
+      })
+    );
+  }
+}}
+
+
+    onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+    placeholder="Type a message..."
+    className="flex-1 px-4 py-2 text-sm border rounded-full focus:outline-none focus:ring-1 focus:ring-purple-500"
+  />
+
+  {/* Send Button */}
+  <button onClick={handleSend} className="text-purple-700 hover:text-purple-900">
+    <FiSend size={20} />
+  </button>
+</div>
+
         </div>
       </div>
     </div>
