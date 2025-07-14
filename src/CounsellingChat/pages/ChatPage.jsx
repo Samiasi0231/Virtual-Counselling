@@ -34,7 +34,6 @@ const ChatPage = ({ initialRole = 'student' }) => {
   const userType = contextUser?.user_type;
   const isStudent = userType === 'student';
   const [unreadIds, setUnreadIds] = useState([]);
-
   const [chatSession, setChatSession] = useState(null);
   const [partnerInfo, setPartnerInfo] = useState(null);
   const [anonymous, setAnonymous] = useState(false);
@@ -43,25 +42,39 @@ const ChatPage = ({ initialRole = 'student' }) => {
   const [typing, setTyping] = useState(false);
   const [file, setFile] = useState(null);
   const [mobileView, setMobileView] = useState(() => !chatIdFromURL);
- 
-
   const messagesEndRef = useRef(null);
 
   const currentUserName = `${contextUser?.firstname || ''} ${contextUser?.lastname || ''}`.trim();
+  const normalizeProfilePhoto = (photo) => typeof photo === 'object' ? photo?.best : photo;
 
-  const normalizeProfilePhoto = (photo) =>
-    typeof photo === 'object' ? photo?.best : photo;
+  const isStudentAnonymous = chatSession?.user_anonymous;
 
-  const displayName = isStudent && anonymous
-    ? 'Anonymous'
-    : partnerInfo?.fullname || currentUserName || 'Unknown';
+const displayName = (() => {
+  // If the user is a student, they should always see their counselor's name
+  if (isStudent) {
+    return partnerInfo?.fullname || `${partnerInfo?.firstname || ''} ${partnerInfo?.lastname || ''}`.trim() || 'Counselor';
+  }
 
-  const displayAvatar = isStudent && anonymous
-    ? null
-    : normalizeProfilePhoto(partnerInfo?.profilePhoto) ||
-      partnerInfo?.avatar ||
-      normalizeProfilePhoto(contextUser?.profilePhoto) ||
-      null;
+  // If the user is a counselor, and student is anonymous
+  if (!isStudent) {
+    return isStudentAnonymous ? 'Anonymous' : partnerInfo?.fullname || `${partnerInfo?.firstname || ''} ${partnerInfo?.lastname || ''}`.trim() || 'Student';
+  }
+
+  return 'Unknown';
+})();
+const displayAvatar = (() => {
+  const photo = normalizeProfilePhoto(partnerInfo?.profilePhoto) || partnerInfo?.avatar || null;
+
+  if (isStudent) {
+    return photo; // Always show counselor's avatar
+  }
+
+  if (!isStudent) {
+    return isStudentAnonymous ? null : photo;
+  }
+
+  return null;
+})();
 
   if (!['student', 'counsellor'].includes(userType)) {
     return <p className="text-center text-red-500">Unauthorized user</p>;
@@ -71,18 +84,13 @@ const ChatPage = ({ initialRole = 'student' }) => {
     setPartnerInfo(partnerData);
     setMessages(fullMessages || messages || []);
     setChatSession(sessionData);
-
-    const unread = (fullMessages || messages || []).filter(
-      (msg) => !msg.read && msg.sender !== userType
-    ).map((msg) => msg.id);
+    const unread = (fullMessages || messages || []).filter((msg) => !msg.read && msg.sender !== userType).map((msg) => msg.id);
     setUnreadIds(unread);
-
     if (isStudent && sessionData?.item_id) {
       const savedAnonymous = getAnonymousForChat(sessionData.item_id);
       setAnonymous(savedAnonymous);
     }
-
-    setMobileView(false); 
+    setMobileView(false);
   };
 
   const partner = userType === 'student'
@@ -96,52 +104,36 @@ const ChatPage = ({ initialRole = 'student' }) => {
     }
   }, [typing]);
 
-
-useEffect(() => {
-  const fetchChatFromQueryParam = async () => {
-    if (!chatIdFromURL) return;
-
-    try {
-      const token = localStorage.getItem('auth_token');
-      const res = await axiosClient.get(`/vpc/get-messages/${chatIdFromURL}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = res.data;
-      const partnerData = isStudent ? data.counselor_data : data.user_data;
-
-      const fullMessages = data.fullMessages || data.messages || [];
-
-      // Highlight unread messages
-      const unread = fullMessages
-        .filter((msg) => !msg.read && msg.sender !== userType)
-        .map((msg) => msg.id);
-      setUnreadIds(unread);
-
-      // Set all necessary state
-      setPartnerInfo(partnerData);
-      setMessages(fullMessages);
-      setChatSession({
-        item_id: chatIdFromURL,
-        user_anonymous: data.user_anonymous ?? false,
-      });
-
-      // Restore anonymous toggle if student
-      if (isStudent) {
-        const savedAnonymous = getAnonymousForChat(chatIdFromURL);
-        setAnonymous(savedAnonymous);
+  useEffect(() => {
+    const fetchChatFromQueryParam = async () => {
+      if (!chatIdFromURL) return;
+      try {
+        const token = localStorage.getItem('auth_token');
+        const res = await axiosClient.get(`/vpc/get-messages/${chatIdFromURL}/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = res.data;
+        const partnerData = isStudent ? data.counselor_data : data.user_data;
+        const fullMessages = data.fullMessages || data.messages || [];
+        const unread = fullMessages.filter((msg) => !msg.read && msg.sender !== userType).map((msg) => msg.id);
+        setUnreadIds(unread);
+        setPartnerInfo(partnerData);
+        setMessages(fullMessages);
+        setChatSession({
+          item_id: chatIdFromURL,
+          user_anonymous: data.user_anonymous ?? false,
+        });
+        if (isStudent) {
+          const savedAnonymous = getAnonymousForChat(chatIdFromURL);
+          setAnonymous(savedAnonymous);
+        }
+        setMobileView(false);
+      } catch (err) {
+        console.error('Failed to auto-load chat:', err);
       }
-
-      // Auto open chat view (on mobile)
-      setMobileView(false);
-    } catch (err) {
-      console.error('Failed to auto-load chat:', err);
-    }
-  };
-
-  fetchChatFromQueryParam();
-}, [chatIdFromURL, isStudent, userType]);
-
+    };
+    fetchChatFromQueryParam();
+  }, [chatIdFromURL, isStudent, userType]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -151,20 +143,16 @@ useEffect(() => {
 
   const toggleAnonymous = async () => {
     if (!isStudent || !chatSession?.item_id) return;
-
     const chatId = chatSession.item_id;
     const token = localStorage.getItem('auth_token');
     const newAnonymousState = !anonymous;
-
     try {
       const response = await axiosClient.put(
         `/vpc/update-anonymous/${chatId}/`,
         { user_anonymous: newAnonymousState },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const updated = response.data?.user_anonymous;
-
       if (typeof updated === 'boolean') {
         setAnonymous(updated);
         setAnonymousForChat(chatId, updated);
@@ -177,25 +165,31 @@ useEffect(() => {
 
   const handleSend = async () => {
     if (!newMessage.trim() && !file) return;
-
     const chatroomId = chatSession?.item_id;
     if (!chatroomId) return;
-
     try {
       const formData = new FormData();
       if (newMessage.trim()) formData.append('text', newMessage.trim());
       if (file) formData.append('file', file);
-
       const token = localStorage.getItem('auth_token');
-      const response = await axiosClient.post(`/vpc/create-message/${chatroomId}/`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const response = await axiosClient.post(
+        `/vpc/create-message/${chatroomId}/`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       const result = response.data;
       const now = new Date();
+      const BASE_MEDIA_URL = 'https://your-domain.com/media/';
+      const mediaUrl = result.media?.[0]
+        ? result.media[0].startsWith('http')
+          ? result.media[0]
+          : `${BASE_MEDIA_URL}${result.media[0]}`
+        : null;
       setMessages((prev) => [
         ...prev,
         {
@@ -205,7 +199,7 @@ useEffect(() => {
           text: result.text,
           time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           date: now.toLocaleDateString(),
-          file: result.media?.[0] || null,
+          file: mediaUrl,
           read: false,
           studentAnonymous: isStudent ? anonymous : false,
         },
@@ -230,7 +224,6 @@ useEffect(() => {
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-gray-100">
-      {/* Mobile Top Bar */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
         <button onClick={() => setMobileView(true)} className="text-purple-600">
           <FiMenu size={22} />
@@ -242,20 +235,15 @@ useEffect(() => {
           </button>
         )}
       </div>
-
-      {/* Side Panel */}
       <div className={`w-full md:w-64 ${mobileView ? 'block' : 'hidden'} md:block`}>
         <ChatSidepanel
           partner={partner}
           onChatSelect={handleChatSelect}
           isStudent={isStudent}
-            activeChatId={chatSession?.item_id || chatIdFromURL}
+          activeChatId={chatSession?.item_id || chatIdFromURL}
         />
       </div>
-
-      {/* Chat Area */}
       <div className={`flex flex-col flex-1 bg-white shadow-md border-l ${mobileView ? 'hidden md:flex' : 'flex'}`}>
-        {/* Chat Header */}
         <div className="hidden md:flex justify-between items-center px-4 py-2 bg-gray-50 border-b">
           <div className="flex items-center gap-2">
             {displayAvatar ? (
@@ -264,6 +252,11 @@ useEffect(() => {
               <Avatar name={displayName} size="32" round className="w-8 h-8" />
             )}
             <span className="font-semibold text-gray-700">{displayName}</span>
+            {!isStudent && isStudentAnonymous && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                Anonymous Student
+              </span>
+            )}
           </div>
           {isStudent && (
             <div className="flex items-center gap-2 ml-auto">
@@ -286,8 +279,6 @@ useEffect(() => {
             </div>
           )}
         </div>
-
-        {/* Messages */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
           {messages
             .filter((msg) => msg.partner === partner)
@@ -303,7 +294,8 @@ useEffect(() => {
                   </div>
                   {msg.file && <p className="text-xs text-blue-600 mt-1">📎 {msg.file}</p>}
                   <span className="text-[10px] text-gray-500 block mt-1 text-right">
-                    {msg.sender !== userType && msg.read ? '✓✓ ' : '✓ '}{msg.time} | {msg.date}
+                    {msg.sender !== userType && msg.read ? '✓✓ ' : '✓ '}
+                    {msg.time} | {msg.date}
                   </span>
                 </div>
               </div>
@@ -315,27 +307,44 @@ useEffect(() => {
           )}
           <div ref={messagesEndRef} />
         </div>
-
-        {/* Input */}
-        <div className="flex items-center gap-2 px-4 py-3 border-t bg-white">
-          <label htmlFor="file-upload" className="cursor-pointer text-gray-500">
-            <FiPaperclip size={20} />
-          </label>
-          <input id="file-upload" type="file" className="hidden" onChange={(e) => setFile(e.target.files[0])} />
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              setTyping(true);
-            }}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type a message..."
-            className="flex-1 px-4 py-2 text-sm border rounded-full focus:outline-none focus:ring-1 focus:ring-purple-500"
-          />
-          <button onClick={handleSend} className="text-purple-700 hover:text-purple-900">
-            <FiSend size={20} />
-          </button>
+        <div className="flex flex-col px-4 py-3 border-t bg-white gap-2">
+          {file && (
+            <div className="flex items-center justify-between bg-gray-100 p-2 rounded border">
+              <div className="flex items-center gap-3">
+                <img src={URL.createObjectURL(file)} alt="Preview" className="w-16 h-16 object-cover rounded" />
+                <span className="text-sm text-gray-700">{file.name}</span>
+              </div>
+              <button onClick={() => setFile(null)} className="text-red-500 text-xs hover:underline">
+                Remove
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <label htmlFor="file-upload" className="cursor-pointer text-gray-500">
+              <FiPaperclip size={20} />
+            </label>
+            <input
+              id="file-upload"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files[0])}
+            />
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => {
+                setNewMessage(e.target.value);
+                setTyping(true);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Type a message..."
+              className="flex-1 px-4 py-2 text-sm border rounded-full focus:outline-none focus:ring-1 focus:ring-purple-500"
+            />
+            <button onClick={handleSend} className="text-purple-700 hover:text-purple-900">
+              <FiSend size={20} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
