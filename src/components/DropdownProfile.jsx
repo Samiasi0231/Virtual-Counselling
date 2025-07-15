@@ -43,13 +43,18 @@ function DropdownProfile({ align }) {
         onClick={() => setDropdownOpen(!dropdownOpen)}
         aria-expanded={dropdownOpen}
       >
-        <img
-          className="w-8 h-8 rounded-full"
-          src={contextUser?.profilePhoto || UserAvatar}
-          width="32"
-          height="32"
-          alt="User"
-        />
+       <img
+  className="w-8 h-8 rounded-full"
+  src={
+    typeof contextUser?.profilePhoto === 'string'
+      ? contextUser.profilePhoto
+      : contextUser?.profilePhoto?.best || UserAvatar
+  }
+  width="32"
+  height="32"
+  alt="User"
+/>
+
         <div className="flex items-center truncate">
           <span className="truncate ml-2 text-sm font-medium text-gray-600 dark:text-gray-100 group-hover:text-gray-800 dark:group-hover:text-white">
             {contextUser?.fullname || `${contextUser?.firstname || ''} ${contextUser?.lastname || ''}` || 'User'}
