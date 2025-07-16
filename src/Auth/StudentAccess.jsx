@@ -35,7 +35,7 @@ const StudentAccess = () => {
         const user = res.data;
         console.log("user", user);
 
-        // ✅ Derive user_type based on is_counselor
+       
         const isCounselor = user.is_counselor;
         const userType = isCounselor ? "counsellor" : "student";
 
@@ -44,7 +44,7 @@ const StudentAccess = () => {
           payload: { user, token, user_type: userType },
         });
 
-        // ✅ Save normalized user_type for rest of app
+    
         localStorage.setItem("USER_ACCESS_TOKEN", token);
         localStorage.setItem("user_type", userType); 
         localStorage.setItem("USER_INFO", JSON.stringify(user));

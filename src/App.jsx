@@ -38,7 +38,7 @@ function App() {
   <Route path='/login'element={<Login/>}/>
        <Route path='/counsellor/access'element={<StudentAccess/>}/>
        
-         <Route path="/student/access" element={<StudentAccess />} />
+         <Route path="/student/access" element={<StudentAccess/>} />
 
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
          
