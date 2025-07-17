@@ -41,7 +41,6 @@ const chatIdToUse = chatIdFromURL || storedChatId;
   const userType = contextUser?.user_type;
   const token = userType === 'student' ? studentToken : counsellorToken;
   const isStudent = userType === 'student';
-
   const [unreadIds, setUnreadIds] = useState([]);
   const [chatSession, setChatSession] = useState(null);
   const [partnerInfo, setPartnerInfo] = useState(null);
@@ -93,6 +92,7 @@ const chatIdToUse = chatIdFromURL || storedChatId;
       setAnonymous(savedAnonymous);
     }
     setMobileView(false);
+    
   }, [isStudent, userType]);
 
   const partner = useMemo(() => userType === 'student'
@@ -106,52 +106,65 @@ const chatIdToUse = chatIdFromURL || storedChatId;
       return () => clearTimeout(timer);
     }
   }, [typing, userType, chatSession]);
-
 useEffect(() => {
   const fetchChatFromQueryParam = async () => {
     if (!chatIdToUse || !token) return;
 
+    setLoadingMessages(true);
+
     try {
-      // Optional: Load from cache first
+      // ✅ 1. Load from cache and keep them until real data arrives
       const cached = localStorage.getItem(`chat_messages_${chatIdToUse}`);
       if (cached) {
-        setMessages(JSON.parse(cached));
+        const parsedCached = JSON.parse(cached);
+        if (Array.isArray(parsedCached)) {
+          setMessages(parsedCached); // ✅ Set cached messages immediately
+        }
       }
 
+      // ✅ 2. Fetch fresh messages
       const res = await axiosClient.get(`/vpc/get-messages/${chatIdToUse}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = res.data;
 
-     const msgArray = Array.isArray(data)
-  ? data.map((msg) => {
-      const isFromCurrentUser = msg.from_counselor
-        ? userType === 'counsellor'
-        : userType === 'student';
+      const msgArray = Array.isArray(data)
+        ? data.map((msg) => {
+            const isFromCurrentUser = msg.from_counselor
+              ? userType === 'counsellor'
+              : userType === 'student';
 
-      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
-      const lastname = msg.from_counselor
-        ? sender?.fullname?.split(' ').slice(-1)[0] || ''
-        : sender?.lastname || '';
+            const sender = msg.from_counselor
+              ? msg.sender_counselor
+              : msg.sender_user;
+            const lastname = msg.from_counselor
+              ? sender?.fullname?.split(' ').slice(-1)[0] || ''
+              : sender?.lastname || '';
 
-      return {
-        ...msg,
-        isFromCurrentUser,
-        file: msg.media?.[0]?.url || null,
-        fileType: msg.media?.[0]?.type || null,
-        text: msg.text || '',
-        time: new Date(msg.created_at).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        groupDate: formatMessageDate(msg.created_at), 
-        studentAnonymous: msg.anonymous ?? false,
-        senderLastName: lastname,
-      };
-    })
-  : [];
+            return {
+              ...msg,
+              isFromCurrentUser,
+              file: msg.media?.[0]?.url || null,
+              fileType: msg.media?.[0]?.type || null,
+              text: msg.text || '',
+              time: new Date(msg.created_at).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              groupDate: formatMessageDate(msg.created_at),
+              studentAnonymous: msg.anonymous ?? false,
+              senderLastName: lastname,
+            };
+          })
+        : [];
 
+      // ✅ 3. Save latest fetched messages to state and localStorage
+      setMessages(msgArray); // ✅ This replaces the cached messages
+      localStorage.setItem(
+        `chat_messages_${chatIdToUse}`,
+        JSON.stringify(msgArray)
+      );
 
       const unread = msgArray
         .filter((msg) => !msg.read && msg.sender !== userType)
@@ -165,14 +178,13 @@ useEffect(() => {
 
       setUnreadIds(unread);
       setPartnerInfo(partnerData);
-      setMessages(msgArray);
 
       setChatSession({
         item_id: chatIdToUse,
         user_anonymous: false,
       });
 
-      localStorage.setItem('lastChatId', chatIdToUse); 
+      localStorage.setItem('lastChatId', chatIdToUse);
 
       if (isStudent) {
         const savedAnonymous = getAnonymousForChat(chatIdToUse);
@@ -181,12 +193,15 @@ useEffect(() => {
 
       setMobileView(false);
     } catch (err) {
-      console.error(' Failed to auto-load chat:', err);
+      console.error('❌ Failed to auto-load chat:', err);
+    } finally {
+      setLoadingMessages(false);
     }
   };
 
   fetchChatFromQueryParam();
 }, [chatIdToUse, isStudent, userType, token]);
+
 
 useEffect(() => {
   if (chatSession?.item_id) {
@@ -363,9 +378,15 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
   return (
   <div className="h-screen flex flex-col md:flex-row bg-gray-100">
   <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
-    <button onClick={() => setMobileView(true)} className="text-purple-600">
-      <FiMenu size={22} />
-    </button>
+   <button
+  onClick={() => setMobileView(prev => !prev)}
+  className={`text-purple-600 transition-transform duration-300 transform ${
+    mobileView ? 'rotate-90 scale-110' : ''
+  }`}
+>
+  <FiMenu size={22} />
+</button>
+
     <span className="font-semibold">{displayName}</span>
     {isStudent && (
       <button onClick={toggleAnonymous} className="text-sm px-2 py-1 border rounded-full text-gray-600">
@@ -425,89 +446,94 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
           )}
         </div>
 
-        <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
+   <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50 relative">
+  {loadingMessages && (
+    <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
+      <span className="text-sm text-gray-500">Loading messages...</span>
+    </div>
+  )}
 
-{Object.entries(groupedMessages).map(([date, msgs]) => (
-  <div key={date}>
-    <div className="text-center text-xs text-gray-500 my-3">{date}</div>
-    {msgs.map(msg => (
-      <div key={msg.id}
-        className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-2 mb-2`}
-      >
-        {/* Avatar for received messages only */}
-        {!msg.isFromCurrentUser && (
-          <div className="shrink-0">
-            {msg.senderAvatar && !msg.studentAnonymous ? (
-              <img
-                src={msg.senderAvatar}
-                alt={getSenderName(msg)}
-                className="w-6 h-6 rounded-full object-cover"
-                title={getSenderName(msg)}
-              />
-            ) : (
-              <Avatar
-                name={getSenderName(msg)}
-                size="24"
-                round
-                title={getSenderName(msg)}
-              />
-            )}
-          </div>
-        )}
-
+  {Object.entries(groupedMessages).map(([date, msgs]) => (
+    <div key={date}>
+      <div className="text-center text-xs text-gray-500 my-3">{date}</div>
+      {msgs.map(msg => (
         <div
-          className={`p-3 rounded-2xl max-w-xs transition-all duration-300 ${
-            msg.isFromCurrentUser ? 'bg-green-100' : 'bg-white border'
-          } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
+          key={msg.id}
+          className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-2 mb-2`}
         >
-          <div className="whitespace-pre-wrap text-sm">
-            <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
-          </div>
-
-          {/* Media preview */}
-          {msg.file && (
-            <>
-              {msg.fileType === 'image' ? (
+          {/* Avatar for received messages only */}
+          {!msg.isFromCurrentUser && (
+            <div className="shrink-0">
+              {msg.senderAvatar && !msg.studentAnonymous ? (
                 <img
-                  src={msg.file}
-                  alt="Uploaded"
-                  className="mt-2 rounded max-w-xs max-h-40 object-cover"
+                  src={msg.senderAvatar}
+                  alt={getSenderName(msg)}
+                  className="w-6 h-6 rounded-full object-cover"
+                  title={getSenderName(msg)}
                 />
               ) : (
-                <p className="text-xs text-blue-600 mt-1 break-all">
-                  📎{' '}
-                  <a href={msg.file} target="_blank" rel="noopener noreferrer">
-                    {msg.file}
-                  </a>
-                </p>
+                <Avatar
+                  name={getSenderName(msg)}
+                  size="24"
+                  round
+                  title={getSenderName(msg)}
+                />
               )}
-            </>
-          )}
-
-          {/* Read Status + Time */}
-        <span
-  className={`text-[10px] block mt-1 text-right ${
-    msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
-  }`}
->
-  {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
-  {msg.time}
-</span>
-
-        </div>
-      </div>
-    ))}
-  </div>
-))}
-
-          {typing && typing.sender && typing.sender !== userType && (
-            <div className="text-sm italic text-gray-500">
-              {typing.sender === 'student' ? (typing.anonymous ? 'Anonymous' : 'Student') : 'Counsellor'} is typing...
             </div>
           )}
-          <div ref={messagesEndRef} />
-        </div>
 
+          <div
+            className={`p-3 rounded-2xl max-w-xs transition-all duration-300 ${
+              msg.isFromCurrentUser ? 'bg-green-100' : 'bg-white border'
+            } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
+          >
+            <div className="whitespace-pre-wrap text-sm">
+              <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
+            </div>
+
+            {/* Media preview */}
+            {msg.file && (
+              <>
+                {msg.fileType === 'image' ? (
+                  <img
+                    src={msg.file}
+                    alt="Uploaded"
+                    className="mt-2 rounded max-w-xs max-h-40 object-cover"
+                  />
+                ) : (
+                  <p className="text-xs text-blue-600 mt-1 break-all">
+                    📎{' '}
+                    <a href={msg.file} target="_blank" rel="noopener noreferrer">
+                      {msg.file}
+                    </a>
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* Read Status + Time */}
+            <span
+              className={`text-[10px] block mt-1 text-right ${
+                msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
+              }`}
+            >
+              {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
+              {msg.time}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  ))}
+
+  {typing && typing.sender && typing.sender !== userType && (
+    <div className="text-sm italic text-gray-500">
+      {typing.sender === 'student' ? (typing.anonymous ? 'Anonymous' : 'Student') : 'Counsellor'} is typing...
+    </div>
+  )}
+
+  <div ref={messagesEndRef} />
+</div>
         <div className="flex flex-col px-4 py-3 border-t bg-white gap-2">
           {file && (
             <div className="flex items-center justify-between bg-gray-100 p-2 rounded border">
