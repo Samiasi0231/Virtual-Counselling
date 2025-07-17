@@ -4,6 +4,7 @@ import { FiSend, FiPaperclip, FiUser, FiUserX, FiMenu } from 'react-icons/fi';
 import { useStateValue } from '../../Context/UseStateValue';
 import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
+import {formatMessageDate} from "../../utils/time"
 import Avatar from 'react-avatar';
 
 const getAnonymousMap = () => {
@@ -123,30 +124,34 @@ useEffect(() => {
 
       const data = res.data;
 
-      const msgArray = Array.isArray(data)
-        ? data.map((msg) => {
-            const isFromCurrentUser = msg.from_counselor
-              ? userType === 'counsellor'
-              : userType === 'student';
+     const msgArray = Array.isArray(data)
+  ? data.map((msg) => {
+      const isFromCurrentUser = msg.from_counselor
+        ? userType === 'counsellor'
+        : userType === 'student';
 
-            const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
-            const lastname = msg.from_counselor
-              ? sender?.fullname?.split(' ').slice(-1)[0] || ''
-              : sender?.lastname || '';
+      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+      const lastname = msg.from_counselor
+        ? sender?.fullname?.split(' ').slice(-1)[0] || ''
+        : sender?.lastname || '';
 
-            return {
-              ...msg,
-              isFromCurrentUser,
-              file: msg.media?.[0]?.url || null,
-              fileType: msg.media?.[0]?.type || null,
-              text: msg.text || '',
-              date: new Date(msg.created_at).toLocaleDateString(),
-              time: new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              studentAnonymous: msg.anonymous ?? false,
-              senderLastName: lastname,
-            };
-          })
-        : [];
+      return {
+        ...msg,
+        isFromCurrentUser,
+        file: msg.media?.[0]?.url || null,
+        fileType: msg.media?.[0]?.type || null,
+        text: msg.text || '',
+        time: new Date(msg.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        groupDate: formatMessageDate(msg.created_at), 
+        studentAnonymous: msg.anonymous ?? false,
+        senderLastName: lastname,
+      };
+    })
+  : [];
+
 
       const unread = msgArray
         .filter((msg) => !msg.read && msg.sender !== userType)
@@ -167,7 +172,7 @@ useEffect(() => {
         user_anonymous: false,
       });
 
-      localStorage.setItem('lastChatId', chatIdToUse); // 👈 save last opened chat
+      localStorage.setItem('lastChatId', chatIdToUse); 
 
       if (isStudent) {
         const savedAnonymous = getAnonymousForChat(chatIdToUse);
@@ -209,8 +214,6 @@ const toggleAnonymous = async () => {
   if (!isStudent || !chatSession?.item_id || !token) return;
   const chatId = chatSession.item_id;
   const newAnonymousState = !anonymous;
-
-  // UI feedback
   setAnonLoading(true);
   setAnonymous(newAnonymousState);
   setAnonymousForChat(chatId, newAnonymousState);
@@ -260,7 +263,7 @@ const toggleAnonymous = async () => {
         file: data.media?.[0]?.url || null,
         fileType: data.media?.[0]?.type || null,
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: now.toLocaleDateString(),
+        groupDate: formatMessageDate(now),
         read: false,
         studentAnonymous: data.anonymous ?? false,
         isFromCurrentUser,
@@ -288,7 +291,6 @@ const toggleAnonymous = async () => {
   }
 };
 
-
     return () => {
       ws.close();
     };
@@ -300,19 +302,24 @@ const toggleAnonymous = async () => {
     const now = new Date();
     const tempId = `temp-${Date.now()}`;
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: tempId,
-        sender: userType,
-        text: newMessage,
-        date: now.toLocaleDateString(),
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        file: file ? URL.createObjectURL(file) : null,
-        read: false,
-        studentAnonymous: isStudent ? anonymous : false,
-      },
-    ]);
+  setMessages((prev) => [
+  ...prev,
+  {
+    id: tempId,
+    sender: userType,
+    text: newMessage,
+    file: file ? URL.createObjectURL(file) : null,
+    fileType: file?.type || null,
+    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    groupDate: formatMessageDate(now), 
+    read: false,
+    isFromCurrentUser: true,     
+    studentAnonymous: isStudent ? anonymous : false,
+    senderFullname: contextUser?.fullname || '', 
+    senderAvatar: normalizeProfilePhoto(contextUser?.profilePhoto),
+  },
+]);
+
 
     setNewMessage('');
     setFile(null);
@@ -344,7 +351,15 @@ const getSenderName = (msg) => {
     return msg.senderFullname || msg.senderLastName || 'Student';
   }
   return msg.senderFullname || msg.senderLastName || 'Counselor';
-};
+}
+const groupedMessages = messages.reduce((groups, msg) => {
+const label = msg.groupDate || formatMessageDate(msg.created_at);
+ if (!groups[label]) groups[label] = [];
+  groups[label].push(msg);
+  return groups;
+}, {});
+
+
   return (
   <div className="h-screen flex flex-col md:flex-row bg-gray-100">
   <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
@@ -412,20 +427,11 @@ const getSenderName = (msg) => {
 
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50">
 
-{Object.entries(
-  messages.reduce((groups, msg) => {
-    const date = msg.date || 'Unknown';
-    if (!groups[date]) groups[date] = [];
-    groups[date].push(msg);
-    return groups;
-  }, {})
-).map(([date, msgs]) => (
+{Object.entries(groupedMessages).map(([date, msgs]) => (
   <div key={date}>
     <div className="text-center text-xs text-gray-500 my-3">{date}</div>
-
-    {msgs.map((msg) => (
-      <div
-        key={msg.id}
+    {msgs.map(msg => (
+      <div key={msg.id}
         className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-2 mb-2`}
       >
         {/* Avatar for received messages only */}
@@ -479,13 +485,15 @@ const getSenderName = (msg) => {
           )}
 
           {/* Read Status + Time */}
-          <span
-            className={`text-[10px] block mt-1 text-right ${
-              msg.read && msg.isFromCurrentUser ? 'text-green-600' : 'text-gray-500'
-            }`}
-          >
-            {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : '✓'} {msg.time}
-          </span>
+        <span
+  className={`text-[10px] block mt-1 text-right ${
+    msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
+  }`}
+>
+  {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
+  {msg.time}
+</span>
+
         </div>
       </div>
     ))}

@@ -21,3 +21,23 @@ const GetRelativeTime = (date) => {
   return date.toLocaleDateString();
 };
 export default GetRelativeTime
+
+// utils/date.js
+export function formatMessageDate(dateString) {
+  const msgDate = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const isToday = msgDate.toDateString() === today.toDateString();
+  const isYesterday = msgDate.toDateString() === yesterday.toDateString();
+
+  if (isToday) return "Today";
+  if (isYesterday) return "Yesterday";
+
+  return msgDate.toLocaleDateString("en-US", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}

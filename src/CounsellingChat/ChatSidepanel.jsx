@@ -10,40 +10,44 @@ const ChatSidepanel = ({ onChatSelect, partner, isStudent, activeChatId, unreadI
   const [searchTerm, setSearchTerm] = useState('');
   const [usersOpen, setUsersOpen] = useState(true);
   const [chatsOpen, setChatsOpen] = useState(true);
+useEffect(() => {
+  const fetchRecentChats = async () => {
+    try {
+      const res = await axiosClient.get("/vpc/get-chat-rooms/");
+      const rooms = res.data;
 
-  useEffect(() => {
-    const fetchRecentChats = async () => {
-      try {
-        const res = await axiosClient.get("/vpc/get-chat-rooms/");
-        const rooms = res.data;
+      const updatedChats = await Promise.all(
+        rooms.map(async (chat) => {
+          try {
+            const res = await axiosClient.get(`/vpc/get-messages/${chat.item_id}/`);
+            const messages = Array.isArray(res.data) ? res.data : res.data.fullMessages || res.data.messages || [];
+            // 🔧 Ensure messages are sorted by date
+            messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-        const updatedChats = await Promise.all(
-          rooms.map(async (chat) => {
-            try {
-              const res = await axiosClient.get(`/vpc/get-messages/${chat.item_id}/`);
-              const messages = res.data.fullMessages || res.data.messages || [];
-              const lastMessage = messages.length ? messages[messages.length - 1] : null;
+            const lastMessage = messages.length ? messages[messages.length - 1] : null;
 
-              return {
-                ...chat,
-                messages,
-                last_message: lastMessage,
-              };
-            } catch (err) {
-              console.error(`Error fetching messages for chat ${chat.item_id}`, err);
-              return chat;
-            }
-          })
-        );
+            return {
+              ...chat,
+              messages,
+              last_message: lastMessage,
+            };
+          } catch (err) {
+            console.error(`Error fetching messages for chat ${chat.item_id}`, err);
+            return chat;
+          }
+        })
+      );
 
-        setRecentChats(updatedChats);
-      } catch (err) {
-        console.error("Error fetching recent chats:", err);
-      }
-    };
+      // ✅ Check what you're setting in state
+      // console.log("Recent chats with last messages:", updatedChats);
+      setRecentChats(updatedChats);
+    } catch (err) {
+      console.error("Error fetching recent chats:", err);
+    }
+  };
 
-    fetchRecentChats();
-  }, []);
+  fetchRecentChats();
+}, []);
 
   const filteredChats = recentChats.filter((chat) => {
     const partnerData = isStudent ? chat.counselor_data : chat.user_data;
@@ -52,6 +56,7 @@ const ChatSidepanel = ({ onChatSelect, partner, isStudent, activeChatId, unreadI
   });
 
   const handleChatSelect = async (chatId) => {
+      if (chatId === activeChatId) return;
     try {
       const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`);
       const data = res.data;
@@ -133,7 +138,11 @@ const ChatSidepanel = ({ onChatSelect, partner, isStudent, activeChatId, unreadI
                 const fullname =
                   partnerData?.fullname ||
                   `${partnerData?.firstname || ""} ${partnerData?.lastname || ""}`.trim();
-                const preview = chat.last_message?.text?.slice(0, 30) || "No messages yet";
+              const preview = chat.last_message?.text?.trim()
+  ? chat.last_message.text.slice(0, 30)
+  : "[No preview available]";
+
+
                 const createdAt = chat.last_message?.created_at;
                 const timePreview = createdAt ? getRelativeTime(new Date(createdAt)) : "";
                 const avatarUrl =
