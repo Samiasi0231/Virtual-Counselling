@@ -1,159 +1,202 @@
-import React, { useState } from 'react';
-import { FaLink, FaPlus, FaExternalLinkAlt } from 'react-icons/fa';
+import React, { useEffect, useState } from "react";
+import { FaLink, FaPlus, FaExternalLinkAlt } from "react-icons/fa";
+import axiosClient from "../../utils/axios-client-analytics";
 
-// Dummy student data
-const dummyStudents = [
-  { id: 's1', name: 'John Doe' },
-  { id: 's2', name: 'Mary Johnson' },
-  { id: 's3', name: 'Ahmed Bello' },
-  { id: 's4', name: 'Chinwe Okeke' },
-];
+const ShareMeetingLink = () => {
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [meetingLink, setMeetingLink] = useState("");
+  const [meetingDate, setMeetingDate] = useState("");
+  const [meetingTime, setMeetingTime] = useState("");
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [sharedLinks, setSharedLinks] = useState([]);
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-function CounselorMeetLinkManager() {
-  const [meetingTitle, setMeetingTitle] = useState('');
-  const [meetUrl, setMeetUrl] = useState('');
-  const [meetingDate, setMeetingDate] = useState('');
-  const [meetingTime, setMeetingTime] = useState('');
-  const [selectedStudents, setSelectedStudents] = useState([]);
-  const [links, setLinks] = useState([]);
-  const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const linksPerPage = 3;
 
-  const allStudentIds = dummyStudents.map(s => s.id);
-  const isAllSelected = selectedStudents.length === allStudentIds.length;
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await axiosClient.get("/vpc/get-users/");
+        const fetched = Array.isArray(res.data) ? res.data : res.data.users || [];
+           console.log(fetched)
+        setUsers(fetched);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
 
-  const handleToggleStudent = (id) => {
-    setSelectedStudents(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    );
+  // Search user by name
+  useEffect(() => {
+    if (search.trim() === "") {
+      setSearchResults([]);
+    } else {
+      const filtered = users.filter(user =>
+        `${user.firstname} ${user.lastname}`.toLowerCase().includes(search.toLowerCase())
+      );
+      setSearchResults(filtered);
+    }
+  }, [search, users]);
+
+  const handleAddUser = (user) => {
+    if (!selectedUsers.find(u => u.item_id === user.item_id)) {
+      setSelectedUsers(prev => [...prev, user]);
+    }
+    setSearch("");
   };
 
-  const handleToggleAll = () => {
-    setSelectedStudents(prev =>
-      isAllSelected ? [] : allStudentIds
-    );
+  const handleRemoveUser = (id) => {
+    setSelectedUsers(prev => prev.filter(user => user.item_id !== id));
   };
 
-  const handleShareLink = () => {
-    setError('');
-    setSuccessMsg('');
+  const handleSubmit = async () => {
+    setError("");
+    setSuccessMsg("");
 
     if (!meetingTitle.trim()) {
-      setError('Please enter a meeting title.');
+      setError("Meeting title is required.");
       return;
     }
-
-    if (!meetUrl.trim() || !meetUrl.includes('meet.google.com')) {
-      setError('Please enter a valid Google Meet URL.');
+    if (!meetingLink.trim() || !meetingLink.includes("meet.google.com")) {
+      setError("A valid Google Meet link is required.");
       return;
     }
-
     if (!meetingDate || !meetingTime) {
-      setError('Please select both date and time.');
+      setError("Date and time are required.");
+      return;
+    }
+    if (selectedUsers.length === 0) {
+      setError("Select at least one recipient.");
       return;
     }
 
-    if (selectedStudents.length === 0) {
-      setError('Please select at least one student.');
-      return;
+    try {
+      await axiosClient.post("/api/share-link", {
+        meetingLink,
+        meetingTitle,
+        meetingDate,
+        meetingTime,
+        recipients: selectedUsers.map(u => u.item_id),
+      });
+
+      const newLink = {
+        id: Date.now(),
+        title: meetingTitle,
+        url: meetingLink,
+        date: meetingDate,
+        time: meetingTime,
+        recipients: selectedUsers,
+      };
+
+      setSharedLinks(prev => [newLink, ...prev]);
+      setMeetingTitle("");
+      setMeetingLink("");
+      setMeetingDate("");
+      setMeetingTime("");
+      setSelectedUsers([]);
+      setSuccessMsg("Meeting link shared successfully!");
+    } catch (err) {
+      console.error("Error sharing link:", err);
+      setError("Failed to share meeting link.");
     }
-
-    const newLink = {
-      id: Date.now().toString(),
-      title: meetingTitle.trim(),
-      url: meetUrl.trim(),
-      date: meetingDate,
-      time: meetingTime,
-      recipients: selectedStudents,
-    };
-
-    setLinks(prev => [newLink, ...prev]);
-    setMeetUrl('');
-    setMeetingTitle('');
-    setMeetingDate('');
-    setMeetingTime('');
-    setSelectedStudents([]);
-    setSuccessMsg('Meeting link shared successfully!');
   };
 
-  const totalPages = Math.ceil(links.length / linksPerPage);
-  const paginatedLinks = links.slice(
-    (currentPage - 1) * linksPerPage,
-    currentPage * linksPerPage
-  );
-
   return (
-     <div className="overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
+   <div className="bg-white rounded-xl shadow p-4  mx-auto overflow-x-auto">
       <h2 className="text-2xl font-semibold text-purple-700 flex items-center gap-2 mb-4">
-        <FaLink /> Counselor Meeting Links
+        <FaLink /> Share Meeting Link
       </h2>
 
-      {/* Form Section */}
-      <div className="space-y-4 mb-4">
+      <div className="space-y-4 mb-6">
         <input
           type="text"
-          placeholder="Enter meeting title or topic"
+          placeholder="Meeting Title"
           value={meetingTitle}
-          onChange={e => setMeetingTitle(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          onChange={(e) => setMeetingTitle(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg"
         />
-
         <input
           type="url"
-          placeholder="Enter Google Meet link"
-          value={meetUrl}
-          onChange={e => setMeetUrl(e.target.value)}
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+          placeholder="Google Meet URL"
+          value={meetingLink}
+          onChange={(e) => setMeetingLink(e.target.value)}
+          className="w-full px-4 py-2 border rounded-lg"
         />
-
         <div className="grid grid-cols-2 gap-4">
           <input
             type="date"
             value={meetingDate}
-            onChange={e => setMeetingDate(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            onChange={(e) => setMeetingDate(e.target.value)}
+            className="px-4 py-2 border rounded-lg"
           />
           <input
             type="time"
             value={meetingTime}
-            onChange={e => setMeetingTime(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            onChange={(e) => setMeetingTime(e.target.value)}
+            className="px-4 py-2 border rounded-lg"
           />
         </div>
 
-        {/* Student Selection */}
+        {/* Search and Add Students */}
         <div>
-          <p className="font-medium text-gray-700 mb-1">Select Students:</p>
-          <div className="flex items-center gap-2 mb-2">
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              onChange={handleToggleAll}
-              className="accent-purple-600"
-            />
-            <span className="text-sm text-purple-700 font-medium">Select All</span>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {dummyStudents.map(student => (
-              <label key={student.id} className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={selectedStudents.includes(student.id)}
-                  onChange={() => handleToggleStudent(student.id)}
-                  className="accent-purple-600"
-                />
-                <span className="text-sm text-gray-700">{student.name}</span>
-              </label>
-            ))}
-          </div>
+          <p className="font-medium text-gray-700 mb-1">Add Students</p>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name"
+            className="w-full border rounded px-3 py-2 mb-2"
+          />
+          {searchResults.length > 0 && (
+            <div className="border rounded p-2 bg-gray-50 space-y-2">
+              {searchResults.map(user => (
+                <div key={user.item_id} className="flex justify-between items-center">
+                  <span>{user.firstname} {user.lastname}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleAddUser(user)}
+                    className="text-blue-600 text-sm hover:underline flex items-center gap-1"
+                  >
+                    <FaPlus /> Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
+        {/* Selected Users */}
+        {selectedUsers.length > 0 && (
+          <div>
+            <p className="font-semibold text-gray-700">Recipients:</p>
+            <ul className="space-y-1 mt-2">
+              {selectedUsers.map(user => (
+                <li
+                  key={user.item_id}
+                  className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                >
+                  <span>{user.lastname}</span>
+                  <button
+                    onClick={() => handleRemoveUser(user.item_id)}
+                    className="text-red-600 text-sm hover:underline"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Share Button */}
         <button
-          onClick={handleShareLink}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          onClick={handleSubmit}
+          disabled={!meetingLink || !meetingTitle || selectedUsers.length === 0}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded flex items-center gap-2"
         >
           <FaPlus /> Share Link
         </button>
@@ -162,28 +205,21 @@ function CounselorMeetLinkManager() {
         {successMsg && <p className="text-green-600">{successMsg}</p>}
       </div>
 
-      {/* Shared Links */}
-      <h3 className="font-semibold text-lg mb-3 text-gray-700">Shared Links</h3>
-      {paginatedLinks.length === 0 ? (
-        <p className="text-gray-500">No links to display.</p>
-      ) : (
-        <ul className="space-y-4">
-          {paginatedLinks.map(link => {
-            const recipientNames = dummyStudents
-              .filter(s => link.recipients.includes(s.id))
-              .map(s => s.name)
-              .join(', ');
-
-            return (
+      {/* Display Shared Links */}
+      {sharedLinks.length > 0 && (
+        <div>
+          <h3 className="font-semibold text-lg mb-2 text-gray-700">Shared Links</h3>
+          <ul className="space-y-4">
+            {sharedLinks.map(link => (
               <li
                 key={link.id}
-                className="bg-gray-50 p-4 rounded-lg shadow-sm border flex justify-between items-start gap-4"
+                className="bg-gray-50 p-4 rounded-lg shadow-sm border flex justify-between items-start"
               >
                 <div>
                   <h4 className="font-medium text-gray-800">{link.title}</h4>
                   <p className="text-sm text-gray-600">📅 {link.date} ⏰ {link.time}</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    👥 Sent to: {recipientNames || 'N/A'}
+                    👥 Sent to: {link.recipients.map(u => u.lastname).join(", ")}
                   </p>
                   <p className="text-sm text-gray-500 truncate max-w-sm mt-1">{link.url}</p>
                 </div>
@@ -191,40 +227,17 @@ function CounselorMeetLinkManager() {
                   href={link.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
                 >
-                  Use Link <FaExternalLinkAlt size={12} />
+                  Open <FaExternalLinkAlt size={12} />
                 </a>
               </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex justify-center items-center gap-4">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            Prev
-          </button>
-          <span className="text-sm">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            Next
-          </button>
+            ))}
+          </ul>
         </div>
       )}
     </div>
   );
-}
+};
 
-export default CounselorMeetLinkManager;
+export default ShareMeetingLink;
