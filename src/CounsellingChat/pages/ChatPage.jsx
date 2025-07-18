@@ -118,7 +118,7 @@ useEffect(() => {
       if (cached) {
         const parsedCached = JSON.parse(cached);
         if (Array.isArray(parsedCached)) {
-          setMessages(parsedCached); // ✅ Set cached messages immediately
+          setMessages(parsedCached); 
         }
       }
 
@@ -159,8 +159,8 @@ useEffect(() => {
           })
         : [];
 
-      // ✅ 3. Save latest fetched messages to state and localStorage
-      setMessages(msgArray); // ✅ This replaces the cached messages
+    
+      setMessages(msgArray); 
       localStorage.setItem(
         `chat_messages_${chatIdToUse}`,
         JSON.stringify(msgArray)
@@ -177,7 +177,20 @@ useEffect(() => {
         : null;
 
       setUnreadIds(unread);
-      setPartnerInfo(partnerData);
+      // setPartnerInfo(partnerData);
+      if (!chatSession) {
+  setPartnerInfo(partnerData); // fallback only if chatSession is missing
+}
+
+useEffect(() => {
+  if (!chatSession) return;
+
+  const data = isStudent ? chatSession.counselor_data : chatSession.user_data;
+  if (data) {
+    setPartnerInfo(data);
+  }
+}, [chatSession, isStudent]);
+
 
       setChatSession({
         item_id: chatIdToUse,
@@ -306,7 +319,7 @@ const toggleAnonymous = async () => {
   }
 };
 
-    return () => {
+  return () => {
       ws.close();
     };
   }, [chatSession?.item_id, userType, token]);
@@ -374,8 +387,7 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
   return groups;
 }, {});
 
-
-  return (
+return (
   <div className="h-screen flex flex-col md:flex-row bg-gray-100">
   <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
    <button
@@ -394,7 +406,7 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
       </button>
     )}
   </div>
-  <div className={`w-full md:w-64 ${mobileView ? 'block' : 'hidden'} md:block`}>
+  <div className={`w-full md:w-80 ${mobileView ? 'block' : 'hidden'} md:block`}>
     <ChatSidepanel
       partner={partner}
       onChatSelect={handleChatSelect}
@@ -445,8 +457,7 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
             </div>
           )}
         </div>
-
-   <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50 relative">
+<div className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
   {loadingMessages && (
     <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
       <span className="text-sm text-gray-500">Loading messages...</span>
@@ -459,7 +470,7 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
       {msgs.map(msg => (
         <div
           key={msg.id}
-          className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-2 mb-2`}
+          className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
         >
           {/* Avatar for received messages only */}
           {!msg.isFromCurrentUser && (
@@ -482,15 +493,14 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
             </div>
           )}
 
-          <div
-            className={`p-3 rounded-2xl max-w-xs transition-all duration-300 ${
-              msg.isFromCurrentUser ? 'bg-green-100' : 'bg-white border'
-            } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
-          >
-            <div className="whitespace-pre-wrap text-sm">
-              <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
-            </div>
-
+         <div
+  className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
+    msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
+  } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
+>
+           <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
+  <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
+</div>
             {/* Media preview */}
             {msg.file && (
               <>

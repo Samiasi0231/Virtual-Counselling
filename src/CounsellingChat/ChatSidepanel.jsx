@@ -81,7 +81,7 @@ useEffect(() => {
   };
 
   return (
-    <aside className="w-full md:w-64 bg-white border-r p-4 space-y-4 h-full overflow-y-auto">
+    <aside className="w-full md:w-80 bg-white border-r p-4 space-y-4 h-full overflow-y-auto">
       <input
         type="text"
         placeholder="Search chats..."

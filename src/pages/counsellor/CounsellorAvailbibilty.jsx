@@ -10,7 +10,7 @@ const CounselorAvailability = () => {
   const [message, setMessage] = useState('');
   const [tooltip, setTooltip] = useState('');
 
-  const mentor_id = '641317483c47e297bedf065f'; // replace with real ID if dynamic
+  const mentor_id = '641317483c47e297bedf065f'; 
 
    const getFormattedDate = (date) => {
    if (!date) return null;
@@ -50,7 +50,7 @@ const CounselorAvailability = () => {
         if (slotDate >= today) {
           formatted[date] = time_slots.map((t) => {
             const [hour, minute] = t.split(':');
-            return `${hour}:${minute}`; // Ensure HH:MM format
+            return `${hour}:${minute}`; 
           });
         }
       });

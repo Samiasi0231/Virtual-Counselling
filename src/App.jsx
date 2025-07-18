@@ -15,7 +15,7 @@ import CounselorAvailability from './pages/counsellor/CounsellorAvailbibilty';
 import StudentBooking from './CounsellingChat/StudentBooking';
 import StudentjoinLive from "./CounsellingChat/UserGoLive"
 import Counsellorjoinlive from "./pages/counsellor/CounselorJoinLive"
-import CounselorList from "./pages/counsellor/CounsellorList"
+import CounsellorList from "./pages/counsellor/CounsellorList"
 import CounsellorNote from "./pages/counsellor/CounsellorNote"
 import StudentNote from "./CounsellingChat/Studentnote"
 import  FeedBack from "./pages/users/FeedBack"
@@ -55,7 +55,7 @@ function App() {
      < Route  path='joinlive' element={<Counsellorjoinlive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
        <Route exact path="counsellor/card" element={<CounsellorCards/>} />
-        <Route path="counsellor/list" element={<CounselorList/>} />
+        <Route path="counsellor/list" element={<CounsellorList/>} />
          < Route  path='calendar' element={<CounselorAvailability/>}/>
          < Route  path='note' element={<CounsellorNote/>}/> 
               {/* < Route  path='activity' element={<ActivityPage/>}/> */}
@@ -74,7 +74,7 @@ function App() {
     }
   >
     <Route index element={<Dashboard />} />
-    <Route path="counsellor/list" element={<CounselorList/>} />
+    <Route path="counsellor/list" element={<CounsellorList/>} />
      <Route exact path="counsellor/card" element={<CounsellorCards/>} />
          <Route  path="Counsellor/profile/:id" element={<CounsellorProfile />} /> 
      < Route path='joinlive' element={<StudentjoinLive/>}/> 
