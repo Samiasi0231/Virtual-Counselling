@@ -6,7 +6,6 @@ import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
 import {formatMessageDate} from "../../utils/time"
 import Avatar from 'react-avatar';
-
 const getAnonymousMap = () => {
   try {
     const stored = localStorage.getItem('anonymous_map');
@@ -28,8 +27,7 @@ const getAnonymousForChat = (chatId) => {
 };
 
 const ChatPage = ({ initialRole = 'student' }) => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+   const navigate = useNavigate();
   const websocketRef = useRef(null);
   const location = useLocation();
   const chatIdFromURL = new URLSearchParams(location.search).get('chatId');
@@ -113,7 +111,6 @@ useEffect(() => {
     setLoadingMessages(true);
 
     try {
-      // ✅ 1. Load from cache and keep them until real data arrives
       const cached = localStorage.getItem(`chat_messages_${chatIdToUse}`);
       if (cached) {
         const parsedCached = JSON.parse(cached);
@@ -121,8 +118,6 @@ useEffect(() => {
           setMessages(parsedCached); 
         }
       }
-
-      // ✅ 2. Fetch fresh messages
       const res = await axiosClient.get(`/vpc/get-messages/${chatIdToUse}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -177,9 +172,9 @@ useEffect(() => {
         : null;
 
       setUnreadIds(unread);
-      // setPartnerInfo(partnerData);
+    
       if (!chatSession) {
-  setPartnerInfo(partnerData); // fallback only if chatSession is missing
+  setPartnerInfo(partnerData); 
 }
 
 useEffect(() => {
@@ -206,7 +201,7 @@ useEffect(() => {
 
       setMobileView(false);
     } catch (err) {
-      console.error('❌ Failed to auto-load chat:', err);
+      console.error('Failed to auto-load chat:', err);
     } finally {
       setLoadingMessages(false);
     }
@@ -225,11 +220,6 @@ useEffect(() => {
     );
   }
 }, [messages, chatSession]);
-
-
-
-
-
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -347,8 +337,6 @@ const toggleAnonymous = async () => {
     senderAvatar: normalizeProfilePhoto(contextUser?.profilePhoto),
   },
 ]);
-
-
     setNewMessage('');
     setFile(null);
     setTyping(false);
@@ -388,7 +376,17 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
 }, {});
 
 return (
+  <div className='h-screen bg-gray-100'>
+     <div className="mb-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+  >
+    ← Back
+  </button>
+</div>
   <div className="h-screen flex flex-col md:flex-row bg-gray-100">
+
   <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
    <button
   onClick={() => setMobileView(prev => !prev)}
@@ -606,7 +604,7 @@ return (
     )}
   </div>
 </div>
-
+</div>
   );
 };
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams,Link,} from 'react-router-dom';
 import axiosClient from '../../utils/axios-client-analytics';
 
 const CounselorProfile = () => {
-  const { id } = useParams(); // counselor_id from URL
+  const { id } = useParams(); 
   const navigate = useNavigate();
   const [counselor, setCounselor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,14 @@ const CounselorProfile = () => {
 
   return (
     <div className="overflow-auto mx-auto shadow-lg rounded-lg font-sans px-4 sm:px-6 lg:px-8 py-8 w-full bg-white">
+ <div className="mb-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+  >
+    ← Back
+  </button>
+</div>
       {/* Avatar + Basic Info */}
       <div className="flex items-center space-x-6">
         <img
