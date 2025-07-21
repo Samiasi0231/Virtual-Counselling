@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
 import { Routes,Route,useLocation } from 'react-router-dom';
 import './css/style.css';
-import Login from "./components/login/Login"
 import ProtectedRoute from './protectedroute/ProtectedRoute';
 import UserRehydrator from './utils/UserRedrator';
-import StudentAccess from './Auth/StudentAccess';
-import CounsellorLayout from './layout/Layout';
+import UserAccess from './Auth/UserAccess';
+import Layout from './layout/Layout';
 import Dashboard from './pages/Dashboard';
 import CounsellorCards from './pages/counsellor/CounsellorProfileCard';
 import CounsellorProfile from "./pages/counsellor/CounselorProfile"
@@ -34,11 +33,9 @@ function App() {
     <>
 <UserRehydrator/>
       <Routes>
-
-  <Route path='/login'element={<Login/>}/>
-       <Route path='/'element={<StudentAccess/>}/>
+       <Route path='/'element={<UserAccess/>}/>
        
-         <Route path="/" element={<StudentAccess/>} />
+         <Route path="/" element={<UserAccess/>} />
 
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
          
@@ -47,7 +44,7 @@ function App() {
     path="/counsellor"
     element={
       <ProtectedRoute allowedRoles={["counsellor"]}>
-        <CounsellorLayout />
+        <Layout />
       </ProtectedRoute>
     }
   >
@@ -69,7 +66,7 @@ function App() {
     path="/student"
     element={
       <ProtectedRoute allowedRoles={["student"]}>
-        <CounsellorLayout />
+        <Layout />
       </ProtectedRoute>
     }
   >
@@ -79,7 +76,7 @@ function App() {
          <Route  path="Counsellor/profile/:id" element={<CounsellorProfile />} /> 
      < Route path='joinlive' element={<StudentjoinLive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
-         < Route  path='calendar' element={<StudentBooking/>}/>
+         < Route  path='calendar/:id' element={<StudentBooking/>}/>
             < Route  path='note' element={<StudentNote/>}/>
               {/* < Route  path='activity' element={<ActivityPage/>}/> */}
                  < Route  path='feedback' element={<FeedBack/>}/>

@@ -17,7 +17,7 @@ const StudentAccess = () => {
     if (!token) {
       console.warn("Missing token");
       setError("Missing credentials.");
-      navigate("/login");
+      navigate("/https://www.acadaboo.com/login");
       return;
     }
 
@@ -56,7 +56,7 @@ const StudentAccess = () => {
         console.error("Auth failed:", err?.response?.data || err.message);
         setError("Invalid or expired token.");
         setLoading(false);
-        navigate("/login");
+    window.location.href = "https://www.acadaboo.com/login";
       }
     };
 

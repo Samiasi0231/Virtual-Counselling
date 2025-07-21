@@ -16,7 +16,8 @@ const isValidTime = (time) => {
   return regex.test(time);
 };
 
-  const mentor_id = '641317483c47e297bedf065f'; 
+ const mentor_id = JSON.parse(localStorage.getItem('user'))?._id;
+
 
   useEffect(() => {
     if (!message) return;
@@ -55,6 +56,7 @@ const isValidTime = (time) => {
     );
 
     const data = res.data || [];
+    console.log(data)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

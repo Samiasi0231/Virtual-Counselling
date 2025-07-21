@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { FaLink, FaPlus, FaExternalLinkAlt } from "react-icons/fa";
 import axiosClient from "../../utils/axios-client-analytics";
@@ -15,13 +16,12 @@ const ShareMeetingLink = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-
+  // Fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const res = await axiosClient.get("/vpc/get-users/");
         const fetched = Array.isArray(res.data) ? res.data : res.data.users || [];
-           console.log(fetched)
         setUsers(fetched);
       } catch (err) {
         console.error("Error fetching users:", err);
@@ -30,7 +30,6 @@ const ShareMeetingLink = () => {
     fetchUsers();
   }, []);
 
-  // Search user by name
   useEffect(() => {
     if (search.trim() === "") {
       setSearchResults([]);
@@ -74,14 +73,19 @@ const ShareMeetingLink = () => {
       return;
     }
 
+    const dateTimeISO = new Date(`${meetingDate}T${meetingTime}`).toISOString();
+
+    const payload = {
+      title: meetingTitle,
+      link: meetingLink,
+      date_and_time: dateTimeISO,
+      invitees: selectedUsers.map(u => u.item_id),
+    };
+
+    console.log("🔍 Sending payload:", payload);
+
     try {
-      await axiosClient.post("/api/share-link", {
-        meetingLink,
-        meetingTitle,
-        meetingDate,
-        meetingTime,
-        recipients: selectedUsers.map(u => u.item_id),
-      });
+      await axiosClient.post("/vpc/schedule-meeting/", payload);
 
       const newLink = {
         id: Date.now(),
@@ -91,7 +95,7 @@ const ShareMeetingLink = () => {
         time: meetingTime,
         recipients: selectedUsers,
       };
-
+ console(newLink)
       setSharedLinks(prev => [newLink, ...prev]);
       setMeetingTitle("");
       setMeetingLink("");
@@ -100,13 +104,13 @@ const ShareMeetingLink = () => {
       setSelectedUsers([]);
       setSuccessMsg("Meeting link shared successfully!");
     } catch (err) {
-      console.error("Error sharing link:", err);
+      console.error("Error sharing link:", err.response?.data || err.message);
       setError("Failed to share meeting link.");
     }
   };
 
   return (
-   <div className="bg-white rounded-xl shadow p-4  mx-auto overflow-x-auto">
+    <div className="bg-white rounded-xl shadow p-4 mx-auto overflow-x-auto">
       <h2 className="text-2xl font-semibold text-purple-700 flex items-center gap-2 mb-4">
         <FaLink /> Share Meeting Link
       </h2>
@@ -141,7 +145,7 @@ const ShareMeetingLink = () => {
           />
         </div>
 
-        {/* Search and Add Students */}
+    
         <div>
           <p className="font-medium text-gray-700 mb-1">Add Students</p>
           <input

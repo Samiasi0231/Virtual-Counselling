@@ -147,12 +147,12 @@ const CounselorProfile = () => {
         >
           {startingChat ? 'Starting...' : 'Message'}
         </button>
-        <button
-          className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
-          onClick={() => navigate('/student/calendar')}
-        >
-          Schedule
-        </button>
+      <button
+  className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
+  onClick={() => navigate(`/student/calendar/${id}`)}
+>
+  Schedule
+</button>
       </div>
     </div>
   );
