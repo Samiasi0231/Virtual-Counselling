@@ -3,4 +3,5 @@ export const initialState = {
   studentToken: null,
   counsellor: null,
   counsellorToken: null,
+  mentor_id: null,
 };

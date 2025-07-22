@@ -1,14 +1,18 @@
 import React, { useState, useEffect,useMemo} from 'react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
+import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../utils/axios-client-analytics';
+import { useStateValue } from '../../Context/UseStateValue';
 
 const CounselorAvailability = () => {
   const [availability, setAvailability] = useState({});
   const [selectedDate, setSelectedDate] = useState(null);
   const [newTimeSlot, setNewTimeSlot] = useState('');
+  const navigate =useNavigate()
   const [message, setMessage] = useState('');
   const [tooltip, setTooltip] = useState('');
+  const [{ mentor_id: contextMentorId }] = useStateValue();
 const [availabilityIds, setAvailabilityIds] = useState({});
 const isValidTime = (time) => {
   // Matches HH:mm where HH is 00–23 and mm is 00–59
@@ -16,7 +20,10 @@ const isValidTime = (time) => {
   return regex.test(time);
 };
 
- const mentor_id = JSON.parse(localStorage.getItem('user'))?._id;
+// const userData = JSON.parse(localStorage.getItem("USER_INFO"));
+// const mentor_id = userData?.item_id || null;
+const mentor_id = contextMentorId;
+
 
 
   useEffect(() => {
@@ -175,6 +182,14 @@ const modifiers = useMemo(() => ({
 
   return (
     <div className="sm:p-6 lg:px-10 py-6 border border-gray-200 overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
+       <div className="mb-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+  >
+    ← Back
+  </button>
+</div>
       <h2 className="text-2xl font-bold text-gray-800 mb-4">📅 Manage Availability</h2>
 
       {/* Calendar */}

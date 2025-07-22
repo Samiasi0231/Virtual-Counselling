@@ -76,7 +76,7 @@ function App() {
          <Route  path="Counsellor/profile/:id" element={<CounsellorProfile />} /> 
      < Route path='joinlive' element={<StudentjoinLive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
-         < Route  path='calendar/:id' element={<StudentBooking/>}/>
+         < Route  path='calendar/:mentor_id' element={<StudentBooking/>}/>
             < Route  path='note' element={<StudentNote/>}/>
               {/* < Route  path='activity' element={<ActivityPage/>}/> */}
                  < Route  path='feedback' element={<FeedBack/>}/>

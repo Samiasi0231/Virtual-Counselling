@@ -18,6 +18,7 @@ export const reducer = (state, action) => {
           user_type: action.payload.user_type
         },
         counsellorToken: action.payload.token,
+  mentor_id: action.payload.user.item_id || null,
       };
 
     case "LOGOUT":

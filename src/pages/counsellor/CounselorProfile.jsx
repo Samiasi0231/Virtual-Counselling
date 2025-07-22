@@ -149,7 +149,19 @@ const CounselorProfile = () => {
         </button>
       <button
   className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
-  onClick={() => navigate(`/student/calendar/${id}`)}
+ onClick={() =>
+  navigate(`/student/calendar/${id}`, {
+    state: {
+      fullname: counselor.fullname,
+      profilePhoto:
+        counselor.profilePhoto?.best ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          counselor.fullname
+        )}&background=4F46E5&color=fff&size=128`
+    }
+  })
+}
+
 >
   Schedule
 </button>
