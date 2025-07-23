@@ -44,41 +44,36 @@ const fetchAvailability = async () => {
     const formatted = {};
 
     data.forEach(({ date, time_slots }) => {
-      const slotDate = new Date(date);
-      slotDate.setHours(0, 0, 0, 0);
-
-      const iso = slotDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+    const iso = date instanceof Date ? date.toLocaleDateString('en-CA') : date;
 
       if (time_slots.length > 0) {
-        // Sort time slots chronologically
         const sortedSlots = time_slots.sort((a, b) => {
           return new Date(`1970-01-01T${a}:00`) - new Date(`1970-01-01T${b}:00`);
         });
-
         formatted[iso] = sortedSlots;
       }
     });
 
-    // Sort dates to avoid disorder
-    const allDates = Object.keys(formatted)
-      .map((d) => new Date(d))
-      .sort((a, b) => a - b);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    const pastAvailable = allDates.filter((d) => d < today);
-    const futureAvailable = allDates.filter((d) => d >= today);
+    // const key = selectedDate.toLocaleDateString('en-CA');
+const allDates = Object.keys(formatted);
+    const pastAvailable = allDates.filter((d) => new Date(d) < today);
+    const futureAvailable = allDates.filter((d) => new Date(d) >= today);
 
     setAvailability(formatted);
-    setAvailableDates(futureAvailable);
+    setAvailableDates(futureAvailable); // both are string arrays
     setPastAvailableDates(pastAvailable);
 
-    // Debug logs
     console.log('Formatted Availability:', formatted);
-    console.log('Future Dates:', futureAvailable.map((d) => d.toISOString()));
-    console.log('Past Dates:', pastAvailable.map((d) => d.toISOString()));
+    console.log('Future Dates:', futureAvailable);
+    console.log('Past Dates:', pastAvailable);
   } catch (error) {
     console.error('Failed to load availability:', error);
   }
 };
+
 
   useEffect(() => {
     fetchAvailability();
@@ -86,7 +81,7 @@ const fetchAvailability = async () => {
 
   useEffect(() => {
     if (!selectedDate) return;
-    const key = selectedDate.toISOString().split('T')[0];
+  const key = selectedDate.toLocaleDateString('en-CA'); 
     setTimeSlots(availability[key] || []);
     setSelectedTime('');
   }, [selectedDate, availability]);
@@ -94,12 +89,8 @@ const fetchAvailability = async () => {
 const handleDateSelect = (date) => {
   if (!date) return;
 
-  const dateStr = date.toLocaleDateString('en-CA'); 
-  const today = new Date();
-  if (date < today.setHours(0, 0, 0, 0)) {
-    alert(' You cannot book past dates.');
-    return;
-  }
+  const dateStr = date.toLocaleDateString('en-CA');
+
 
   if (!availability[dateStr]) {
     alert(' No available time slots for this date.');
@@ -141,27 +132,20 @@ const handleConfirm = async () => {
 };
 
 
-  // const handleConfirm = () => {
-  //   const booking = {
-  //     counselor: {fullname},
-  //     date: selectedDate.toDateString(),
-  //     time: selectedTime,
-  //     duration: '50 minutes',
-  //     status: 'Booked',
-  //   };
+const modifiers = {
+available: (date) => availableDates.includes(date.toLocaleDateString('en-CA')),
+pastAvailable: (date) => pastAvailableDates.includes(date.toLocaleDateString('en-CA')),
 
-  //   const existing = JSON.parse(localStorage.getItem('bookings')) || [];
-  //   localStorage.setItem('bookings', JSON.stringify([...existing, booking]));
-  //   setConfirmed(true);
-  // };
+};
 
-  const modifiers = { available: availableDates, pastAvailable: pastAvailableDates, };
-  const modifiersClassNames = {
-    available: 'bg-green-100 text-green-800 font-semibold rounded-full',
-    selected: 'bg-purple-600 text-white',
-    today: 'text-blue-800 font-bold',
-    pastAvailable:"bg-red-500 font-semibold rounded-full "
-  };
+
+const modifiersClassNames = {
+  available: 'bg-green-100 text-green-800 font-semibold rounded-full',
+  selected: 'bg-purple-600 text-white',
+  today: 'text-blue-800 font-bold border border-blue-500',
+  pastAvailable: 'bg-red-500 text-white font-semibold rounded-full'
+};
+
 
   const formattedDate = selectedDate?.toDateString();
 
@@ -169,8 +153,6 @@ const handleConfirm = async () => {
     return (
       <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md border border-gray-200 space-y-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">✅ Booking Confirmed!</h2>
-        <p className="text-purple-600 mb-1">You’ll receive an email confirmation shortly.</p>
-        <p className="text-purple-600 text-sm">A secure video session link will be shared with you.</p>
       </div>
     );
   }
@@ -209,10 +191,11 @@ const handleConfirm = async () => {
             onSelect={handleDateSelect}
             modifiers={modifiers}
             modifiersClassNames={modifiersClassNames}
-            disabled={(date) => {
-             const iso = date.toLocaleDateString('en-CA');
+   disabled={(date) => {
+  const iso = date.toLocaleDateString('en-CA');
   return date < today || !availability[iso];
-            }}
+}}
+
             className="!text-sm"
           />
           <p className="text-xs text-gray-500 mt-2">

@@ -13,7 +13,6 @@ const CounselorAvailability = () => {
   const [message, setMessage] = useState('');
   const [tooltip, setTooltip] = useState('');
   const [{ mentor_id: contextMentorId }] = useStateValue();
-const [availabilityIds, setAvailabilityIds] = useState({});
 const isValidTime = (time) => {
   // Matches HH:mm where HH is 00–23 and mm is 00–59
   const regex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -85,7 +84,7 @@ const mentor_id = contextMentorId;
     });
 
     setAvailability(formatted);
-    setAvailabilityIds(ids);
+  
   } catch (error) {
     console.error('Failed to load availability:', error);
   }
@@ -222,14 +221,12 @@ const modifiers = useMemo(() => ({
         </p>
       </div>
 
-      {/* Time Slot Editor */}
       {selectedDate && (
         <div className="mb-6">
           <h3 className="text-lg font-medium text-gray-700 mb-2">
             Set availability for {selectedDate.toDateString()}
           </h3>
 
-          {/* Existing Slots */}
           <div className="mb-3">
             <p className="text-sm text-gray-600 mb-1">Current slots:</p>
             {slots.length > 0 ? (
@@ -251,7 +248,6 @@ const modifiers = useMemo(() => ({
             )}
           </div>
 
-          {/* Add New Slot */}
           <div className="flex items-center space-x-2">
             <input
               type="text"
@@ -276,7 +272,7 @@ const modifiers = useMemo(() => ({
         </div>
       )}
 
-      {/* Save Button */}
+   
 <div className="text-right">
   <button
     className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
@@ -286,7 +282,7 @@ const modifiers = useMemo(() => ({
   </button>
 </div>
 
-{/* Success or error message */}
+
 {message && (
   <div className="mt-4 text-green-600 font-medium bg-green-100 border border-green-300 px-4 py-2 rounded">
     {message}

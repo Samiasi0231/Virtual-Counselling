@@ -211,6 +211,7 @@ function Sidebar({
                               </span>
                             </NavLink>
                           </li>
+                        
                           <li className="mb-1 last:mb-0">
                             <NavLink
                               end
@@ -224,6 +225,7 @@ function Sidebar({
                               </span>
                             </NavLink>
                           </li>
+                            {userType !== "student" && (
                              <li className="mb-1 last:mb-0">
                             <NavLink
                               end
@@ -237,6 +239,7 @@ function Sidebar({
                               </span>
                             </NavLink>
                           </li>
+                          )}
                         </ul>
                       </div>
                     </React.Fragment>
