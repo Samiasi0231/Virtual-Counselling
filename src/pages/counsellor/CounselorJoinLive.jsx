@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import { FaLink, FaPlus, FaExternalLinkAlt, FaEdit, FaTrash } from "react-icons/fa";
 import axiosClient from "../../utils/axios-client-analytics";
-
+import { toast } from 'react-toastify';
 const ShareMeetingLink = () => {
   const navigate = useNavigate();
   const [meetingTitle, setMeetingTitle] = useState("");
@@ -17,7 +17,7 @@ const ShareMeetingLink = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [editMeetingId, setEditMeetingId] = useState(null);
-  const [previousRecipients, setPreviousRecipients] = useState([]); // store for scheme comparison
+  const [previousRecipients, setPreviousRecipients] = useState([]); 
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -33,6 +33,37 @@ const ShareMeetingLink = () => {
     fetchUsers();
   }, []);
 
+useEffect(() => {
+  const fetchCounsellorMeetings = async () => {
+    try {
+      const page = 0;
+const isPast = false;
+      const res = await axiosClient.get(`/vpc/get-user-meetings/${page}/${isPast}/`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+
+      const meetings = Array.isArray(res.data?.results) ? res.data.results : res.data || [];
+
+      const formatted = meetings.map(link => {
+        const dateObj = new Date(link.date_and_time);
+        return {
+          id: link.id || link._id,
+          title: link.title,
+          url: link.link,
+          date: dateObj.toISOString().split("T")[0],
+          time: dateObj.toTimeString().slice(0, 5),
+          recipients: link.invitees || [],
+        };
+      });
+
+      setSharedLinks(formatted);
+    } catch (err) {
+      console.error("Failed to load counsellor meetings:", err);
+    }
+  };
+
+  fetchCounsellorMeetings();
+}, []);
   useEffect(() => {
     if (!search.trim()) return setSearchResults([]);
     const filtered = users.filter(user =>
@@ -89,39 +120,37 @@ const ShareMeetingLink = () => {
     const dateTimeISO = new Date(`${meetingDate}T${meetingTime}`).toISOString();
 
     try {
-      if (editMeetingId) {
-        // Build scheme from comparison
-        const scheme = getSchemeArray(previousRecipients, selectedUsers);
+     if (editMeetingId) {
+  const payload = {
+    title: meetingTitle,
+    link: meetingLink,
+    date_and_time: dateTimeISO,
+    invitees: selectedUsers.map(u => u.item_id),
+  };
 
-        const payload = {
-          title: meetingTitle,
-          link: meetingLink,
-          date_and_time: dateTimeISO,
-          scheme
-        };
+ await axiosClient.put(`/vpc/edit-meeting/${editMeetingId}/`, payload, {
+  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+});
 
-        await axiosClient.put(`/vpc/schedule-meeting/${editMeetingId}/`, payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
+  setSharedLinks(prev =>
+    prev.map(link =>
+      link.id === editMeetingId
+        ? {
+            ...link,
+            title: meetingTitle,
+            url: meetingLink,
+            date: meetingDate,
+            time: meetingTime,
+            recipients: selectedUsers,
+          }
+        : link
+    )
+  );
 
-        setSharedLinks(prev =>
-          prev.map(link =>
-            link.id === editMeetingId
-              ? {
-                  ...link,
-                  title: meetingTitle,
-                  url: meetingLink,
-                  date: meetingDate,
-                  time: meetingTime,
-                  recipients: selectedUsers,
-                }
-              : link
-          )
-        );
+  setSuccessMsg("Meeting updated successfully!");
 
-        setSuccessMsg("Meeting updated successfully!");
       } else {
-        // Create new meeting
+    
         const payload = {
           title: meetingTitle,
           link: meetingLink,
@@ -143,7 +172,7 @@ const ShareMeetingLink = () => {
         };
 
         setSharedLinks(prev => [newLink, ...prev]);
-        setSuccessMsg("Meeting link shared successfully!");
+         toast.success("Meeting link shared successfully!");
       }
 
       resetForm();
@@ -174,10 +203,10 @@ const ShareMeetingLink = () => {
       });
       setSharedLinks(prev => prev.filter(link => link.id !== id));
       if (editMeetingId === id) resetForm();
-      setSuccessMsg("Meeting deleted successfully!");
+     toast.success("meeting delete Successful!");
     } catch (err) {
       console.error("Failed to delete meeting:", err.response?.data || err.message);
-      setError("Failed to delete meeting.");
+      toast.error("Failed to delete meeting.");
     }
   };
 
@@ -287,41 +316,39 @@ const ShareMeetingLink = () => {
           <h3 className="font-semibold text-lg mb-2 text-gray-700">Shared Links</h3>
           <ul className="space-y-4">
             {sharedLinks.map(link => (
-              <li key={link.id} className="bg-gray-50 p-4 rounded-lg shadow-sm border flex justify-between items-start">
-                <div>
-                  <h4 className="font-medium text-gray-800">{link.title}</h4>
-                  <p className="text-sm text-gray-600">📅 {link.date} ⏰ {link.time}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    👥 Sent to: {link.recipients?.map(u => u.lastname).join(", ") || "None"}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate max-w-sm mt-1">{link.url}</p>
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                  >
-                    Open <FaExternalLinkAlt size={12} />
-                  </a>
-                  <button
-                    onClick={() => handleEdit(link)}
-                    className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                  >
-                    <FaEdit /> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(link.id)}
-                    className="text-sm text-red-600 hover:underline flex items-center gap-1"
-                  >
-                    <FaTrash /> Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+          <li className="bg-gray-50 p-4 rounded-lg shadow-sm border flex flex-col md:flex-row justify-between md:items-center gap-4">
+  <div className="flex-1">
+    <h4 className="font-medium text-gray-800">{link.title}</h4>
+    <p className="text-sm text-gray-600">📅 {link.date} ⏰ {link.time}</p>
+    <p className="text-sm text-gray-500 truncate max-w-full mt-1">{link.url}</p>
+  </div>
+
+  <div className="flex flex-wrap gap-2">
+    <a
+      href={link.url}
+      target="_blank"
+      rel="noreferrer"
+      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1"
+    >
+      Join <FaExternalLinkAlt size={12} />
+    </a>
+    <button
+      onClick={() => handleEdit(link)}
+      className="text-sm text-blue-600 hover:underline flex items-center gap-1"
+    >
+      <FaEdit /> Edit
+    </button>
+    <button
+      onClick={() => handleDelete(link.id)}
+      className="text-sm text-red-600 hover:underline flex items-center gap-1"
+    >
+      <FaTrash /> Delete
+    </button>
+  </div>
+</li>
+ ))}
+ </ul>
+  </div>
       )}
     </div>
   );

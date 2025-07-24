@@ -109,24 +109,6 @@ const CounselorProfile = () => {
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className="mt-6">
-        <h3 className="text-lg font-medium text-gray-700">Statistics</h3>
-        <div className="grid grid-cols-3 gap-4 mt-2">
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-700">Clients</h4>
-            <p className="text-gray-600 text-base">34 Active</p>
-          </div>
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-700">Sessions</h4>
-            <p className="text-gray-600 text-base">87 this month</p>
-          </div>
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-700">Rating</h4>
-            <p className="text-yellow-500 text-base">4.9 ★</p>
-          </div>
-        </div>
-      </div>
 
       {/* Availability */}
       <div className="mt-4">

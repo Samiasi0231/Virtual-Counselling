@@ -8,6 +8,7 @@ function UserGoLive() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [lastMeeting, setLastMeeting] = useState(null);
 
   const fetchMeetings = async () => {
     try {
@@ -35,6 +36,19 @@ function UserGoLive() {
     fetchMeetings();
   }, [filter, currentPage]);
 
+  useEffect(() => {
+    const saved = localStorage.getItem('lastMeeting');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const meetingDate = new Date(parsed.date_and_time);
+      if (meetingDate > new Date()) {
+        setLastMeeting(parsed);
+      } else {
+        localStorage.removeItem('lastMeeting');
+      }
+    }
+  }, []);
+
   const getCountdown = (startTime) => {
     const diff = new Date(startTime) - new Date();
     if (diff <= 0) return 'Started';
@@ -52,13 +66,17 @@ function UserGoLive() {
     return parts.join(' ');
   };
 
-  // 🧹 Local delete without API call
   const deleteMeeting = (meeting_id) => {
     const confirmDelete = window.confirm('Are you sure you want to remove this session?');
     if (!confirmDelete) return;
 
-    // Only update local state
     setLinks((prev) => prev.filter(link => (link.id || link._id) !== meeting_id));
+
+    // Also remove from localStorage if deleted
+    if (lastMeeting && (lastMeeting.id === meeting_id || lastMeeting._id === meeting_id)) {
+      localStorage.removeItem('lastMeeting');
+      setLastMeeting(null);
+    }
   };
 
   return (
@@ -81,6 +99,22 @@ function UserGoLive() {
           Past
         </button>
       </div>
+
+      {lastMeeting && (
+        <div className="bg-purple-50 border border-purple-300 rounded p-4 mb-6">
+          <h3 className="text-purple-700 font-semibold mb-2">Last Sent Meeting</h3>
+          <p className="text-sm"><strong>Title:</strong> {lastMeeting.title}</p>
+          <p className="text-sm"><strong>Date:</strong> {new Date(lastMeeting.date_and_time).toLocaleString()}</p>
+          <a
+            href={lastMeeting.link}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-blue-600 underline text-sm mt-1"
+          >
+            Join <FaExternalLinkAlt size={12} />
+          </a>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-gray-500">Loading sessions...</p>

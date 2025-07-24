@@ -54,6 +54,24 @@ const chatIdToUse = chatIdFromURL || storedChatId;
 
   const normalizeProfilePhoto = (photo) => typeof photo === 'object' ? photo?.best : photo;
 
+
+
+const extractFileData = (data) => {
+  if (Array.isArray(data.attachments) && data.attachments.length > 0) {
+    return {
+      file: data.attachments[0].location,
+      fileType: data.attachments[0].attachments_type,
+    };
+  }
+  if (Array.isArray(data.media) && data.media.length > 0) {
+    return {
+      file: data.media[0].location,
+      fileType: data.media[0].media_type,
+    };
+  }
+  return { file: null, fileType: null };
+};
+
   const isStudentAnonymous = chatSession?.user_anonymous;
 
  const displayName = useMemo(() => {
@@ -140,8 +158,9 @@ useEffect(() => {
             return {
               ...msg,
               isFromCurrentUser,
-              file: msg.media?.[0]?.url || null,
-              fileType: msg.media?.[0]?.type || null,
+file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+
               text: msg.text || '',
               time: new Date(msg.created_at).toLocaleTimeString([], {
                 hour: '2-digit',
@@ -274,29 +293,51 @@ const toggleAnonymous = async () => {
       const sender = data.sender || (data.from_counselor ? 'counsellor' : 'student');
       const isFromCurrentUser = sender === userType;
 
-      const newMsg = {
-        id: data.item_id || now.getTime(),
-        sender,
-        text: data.text,
-        file: data.media?.[0]?.url || null,
-        fileType: data.media?.[0]?.type || null,
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        groupDate: formatMessageDate(now),
-        read: false,
-        studentAnonymous: data.anonymous ?? false,
-        isFromCurrentUser,
-        senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
-        senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
-      };
+const { file, fileType } = extractFileData(data);
 
-      setMessages((prev) => {
-        const filtered = prev.filter(
-          (msg) =>
-            msg.id !== newMsg.id &&
-            !(msg.id?.startsWith('temp') && msg.text === data.text)
-        );
-        return [...filtered, newMsg];
-      });
+const newMsg = {
+  id: data.item_id || now.getTime(),
+  sender,
+  text: data.text,
+  file,        
+  fileType,     
+  time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  groupDate: formatMessageDate(now),
+  read: false,
+  studentAnonymous: data.anonymous ?? false,
+  isFromCurrentUser,
+  senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
+  senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
+};
+
+
+      // setMessages((prev) => {
+      //   const filtered = prev.filter(
+      //     (msg) =>
+      //       msg.id !== newMsg.id &&
+      //       !(msg.id?.startsWith('temp') && msg.text === data.text)
+      //   );
+      //   return [...filtered, newMsg];
+      // });
+setMessages((prev) => {
+  const safePrev = Array.isArray(prev) ? prev : [];
+  const filtered = safePrev.filter((msg) => {
+    const isTemp = msg.id?.startsWith('temp');
+    const matchesText = msg.text === data.text;
+    const matchesFile = file &&
+      msg.file?.startsWith('blob:') &&
+      msg.fileType === (data.attachments?.[0]?.attachments_type || data.fileType);
+
+    return !(isTemp && (matchesText || matchesFile));
+  });
+
+  return [...filtered, newMsg];
+});
+
+
+
+
+
     }
 
 
@@ -327,7 +368,7 @@ const toggleAnonymous = async () => {
     sender: userType,
     text: newMessage,
     file: file ? URL.createObjectURL(file) : null,
-    fileType: file?.type || null,
+    fileType: file?.type?.startsWith('image') ? 'image' : 'file',
     time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     groupDate: formatMessageDate(now), 
     read: false,
@@ -344,7 +385,7 @@ const toggleAnonymous = async () => {
     try {
       const formData = new FormData();
       if (newMessage.trim()) formData.append('text', newMessage.trim());
-   if (file) formData.append('media', file);
+   if (file) formData.append('attachments', file);
       await axiosClient.post(
         `/vpc/create-message/${chatSession.item_id}/`,
         formData,
@@ -368,7 +409,7 @@ const getSenderName = (msg) => {
   }
   return msg.senderFullname || msg.senderLastName || 'Counselor';
 }
-const groupedMessages = messages.reduce((groups, msg) => {
+const groupedMessages = (messages || []).reduce((groups, msg) => {
 const label = msg.groupDate || formatMessageDate(msg.created_at);
  if (!groups[label]) groups[label] = [];
   groups[label].push(msg);
@@ -462,77 +503,77 @@ return (
     </div>
   )}
 
-  {Object.entries(groupedMessages).map(([date, msgs]) => (
-    <div key={date}>
-      <div className="text-center text-xs text-gray-500 my-3">{date}</div>
-      {msgs.map(msg => (
+ {Object.entries(groupedMessages).map(([date, msgs]) => (
+  <div key={date}>
+    <div className="text-center text-xs text-gray-500 my-3">{date}</div>
+
+    {msgs.map(msg => (
+      <div
+        key={msg.id}
+        className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
+      >
+        {!msg.isFromCurrentUser && (
+          <div className="shrink-0">
+            {msg.senderAvatar && !msg.studentAnonymous ? (
+              <img
+                src={msg.senderAvatar}
+                alt={getSenderName(msg)}
+                className="w-6 h-6 rounded-full object-cover"
+                title={getSenderName(msg)}
+              />
+            ) : (
+              <Avatar
+                name={getSenderName(msg)}
+                size="24"
+                round
+                title={getSenderName(msg)}
+              />
+            )}
+          </div>
+        )}
+
         <div
-          key={msg.id}
-          className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
+          className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
+            msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
+          } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
         >
-          {/* Avatar for received messages only */}
-          {!msg.isFromCurrentUser && (
-            <div className="shrink-0">
-              {msg.senderAvatar && !msg.studentAnonymous ? (
+          <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
+            <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
+          </div>
+
+          {msg.file && (
+            <>
+              {msg.fileType === 'image' ? (
                 <img
-                  src={msg.senderAvatar}
-                  alt={getSenderName(msg)}
-                  className="w-6 h-6 rounded-full object-cover"
-                  title={getSenderName(msg)}
+                  src={msg.file}
+                  alt="Uploaded"
+                  className="mt-2 rounded max-w-xs max-h-40 object-cover"
                 />
               ) : (
-                <Avatar
-                  name={getSenderName(msg)}
-                  size="24"
-                  round
-                  title={getSenderName(msg)}
-                />
+                <p className="text-xs text-blue-600 mt-1 break-all">
+                  📎{' '}
+                  <a href={msg.file} target="_blank" rel="noopener noreferrer">
+                    {msg.file}
+                  </a>
+                </p>
               )}
-            </div>
+            </>
           )}
 
-         <div
-  className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
-    msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
-  } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
->
-           <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
-  <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
-</div>
-            {/* Media preview */}
-            {msg.file && (
-              <>
-                {msg.fileType === 'image' ? (
-                  <img
-                    src={msg.file}
-                    alt="Uploaded"
-                    className="mt-2 rounded max-w-xs max-h-40 object-cover"
-                  />
-                ) : (
-                  <p className="text-xs text-blue-600 mt-1 break-all">
-                    📎{' '}
-                    <a href={msg.file} target="_blank" rel="noopener noreferrer">
-                      {msg.file}
-                    </a>
-                  </p>
-                )}
-              </>
-            )}
-
-            {/* Read Status + Time */}
-            <span
-              className={`text-[10px] block mt-1 text-right ${
-                msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
-              }`}
-            >
-              {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
-              {msg.time}
-            </span>
-          </div>
+          <span
+            className={`text-[10px] block mt-1 text-right ${
+              msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
+            }`}
+          >
+            {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
+            {msg.time}
+          </span>
         </div>
-      ))}
-    </div>
-  ))}
+      </div>
+    ))}
+  </div>
+))}
+
 
   {typing && typing.sender && typing.sender !== userType && (
     <div className="text-sm italic text-gray-500">

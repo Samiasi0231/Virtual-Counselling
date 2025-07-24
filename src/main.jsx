@@ -6,13 +6,15 @@ import ThemeProvider from './utils/ThemeContext';
 import App from './App';
 import { initialState} from './Context/InitialState';
 import { reducer } from './Context/Reducer';
-
+import 'react-toastify/dist/ReactToastify.css'; 
+import ToastWrapper from './utils/ToastWrapper';
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <Router>
       <ThemeProvider>
         <StateProvider initialState={initialState} reducer={reducer}>
         <App />
+        <ToastWrapper/>
       </StateProvider>
       </ThemeProvider>
     </Router>

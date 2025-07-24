@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import axiosClient from '../utils/axios-client-analytics';
+import { toast } from 'react-toastify';
 import { useLocation,useParams, useNavigate} from 'react-router-dom';
 const StudentBooking = () => {
   const { mentor_id } = useParams();
@@ -63,7 +64,7 @@ const allDates = Object.keys(formatted);
     const futureAvailable = allDates.filter((d) => new Date(d) >= today);
 
     setAvailability(formatted);
-    setAvailableDates(futureAvailable); // both are string arrays
+    setAvailableDates(futureAvailable); 
     setPastAvailableDates(pastAvailable);
 
     console.log('Formatted Availability:', formatted);
@@ -93,7 +94,7 @@ const handleDateSelect = (date) => {
 
 
   if (!availability[dateStr]) {
-    alert(' No available time slots for this date.');
+    toast.error('No available time slots for this date.');
     return;
   }
 
@@ -123,11 +124,11 @@ const handleConfirm = async () => {
         'Content-Type': 'application/json',
       },
     });
-
+toast.success('✅ Booking confirmed!');
     setConfirmed(true);
   } catch (error) {
     console.error('Booking failed:', error);
-    alert(' Booking failed. Please try again.');
+    toast.error(' Booking failed. Please try again.');
   }
 };
 
@@ -214,7 +215,10 @@ const modifiersClassNames = {
                 {timeSlots.map((slot) => (
                   <li key={slot}>
                     <button
-                      onClick={() => setSelectedTime(slot)}
+                    onClick={() => {
+  setSelectedTime(slot);
+  toast.info(`🕒 Selected time: ${slot}`);
+}}
                       className={`w-full py-2 px-3 rounded border text-center ${
                         selectedTime === slot
                           ? 'bg-purple-600 text-white'

@@ -249,13 +249,14 @@ const modifiers = useMemo(() => ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <input
-              type="text"
-              value={newTimeSlot}
-              onChange={(e) => setNewTimeSlot(e.target.value)}
-              placeholder="e.g. 14:30"
-              className="border border-gray-300 px-3 py-2 rounded w-40"
-            />
+           <input
+  type="time"
+  value={newTimeSlot}
+  onChange={(e) => setNewTimeSlot(e.target.value)}
+  step="60"
+  className="border border-gray-300 px-3 py-2 rounded w-40"
+/>
+
             <button
               className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
               onClick={handleAddTimeSlot}
