@@ -154,6 +154,13 @@ const modifiersClassNames = {
     return (
       <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md border border-gray-200 space-y-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">✅ Booking Confirmed!</h2>
+
+         <button
+        onClick={() => navigate('/student/dashboard')}
+        className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+      >
+        OK
+      </button>
       </div>
     );
   }

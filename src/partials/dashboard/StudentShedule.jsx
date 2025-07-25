@@ -100,7 +100,7 @@ const StudentShedule = () => {
       };
 
       updateCountdown();
-      const interval = setInterval(updateCountdown, 60000); // update every minute
+      const interval = setInterval(updateCountdown, 60000); 
       return () => clearInterval(interval);
     }, [booking.dateObj]);
 

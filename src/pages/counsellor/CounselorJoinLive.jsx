@@ -17,7 +17,8 @@ const ShareMeetingLink = () => {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [editMeetingId, setEditMeetingId] = useState(null);
-  const [previousRecipients, setPreviousRecipients] = useState([]); 
+const [previousRecipients, setPreviousRecipients] = useState([]);
+
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -52,13 +53,14 @@ const isPast = false;
           url: link.link,
           date: dateObj.toISOString().split("T")[0],
           time: dateObj.toTimeString().slice(0, 5),
-          recipients: link.invitees || [],
+       recipients: link.invitees_public || []
         };
       });
 
       setSharedLinks(formatted);
     } catch (err) {
       console.error("Failed to load counsellor meetings:", err);
+        toast.error("Failed to load counsellor meetings.");
     }
   };
 
@@ -108,92 +110,111 @@ const isPast = false;
     return scheme;
   };
 
-  const handleSubmit = async () => {
-    setError("");
-    setSuccessMsg("");
+const handleSubmit = async () => {
+  setError("");
+  setSuccessMsg("");
 
-    if (!meetingTitle.trim()) return setError("Meeting title is required.");
-    if (!meetingLink.trim() || !meetingLink.includes("meet.google.com")) return setError("Valid Google Meet link required.");
-    if (!meetingDate || !meetingTime) return setError("Date and time required.");
-    if (!editMeetingId && selectedUsers.length === 0) return setError("Select at least one recipient.");
+  if (!meetingTitle.trim()) return setError("Meeting title is required.");
+  if (!meetingLink.trim() || !meetingLink.includes("meet.google.com")) {
+    return toast.error("Valid Google Meet link required.");
+  }
+  if (!meetingDate || !meetingTime) return setError("Date and time required.");
+  if (!editMeetingId && selectedUsers.length === 0) {
+    return toast.error("Select at least one recipient.");
+  }
 
-    const dateTimeISO = new Date(`${meetingDate}T${meetingTime}`).toISOString();
+  const dateTimeISO = new Date(`${meetingDate}T${meetingTime}`).toISOString();
 
-    try {
-     if (editMeetingId) {
-  const payload = {
-    title: meetingTitle,
-    link: meetingLink,
-    date_and_time: dateTimeISO,
-    invitees: selectedUsers.map(u => u.item_id),
-  };
+  const token = localStorage.getItem("token");
 
- await axiosClient.put(`/vpc/edit-meeting/${editMeetingId}/`, payload, {
-  headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-});
+  try {
+    if (editMeetingId) {
+      // 🔁 Only use scheme when updating
+      const scheme = getSchemeArray(previousRecipients, selectedUsers);
 
-  setSharedLinks(prev =>
-    prev.map(link =>
-      link.id === editMeetingId
-        ? {
-            ...link,
-            title: meetingTitle,
-            url: meetingLink,
-            date: meetingDate,
-            time: meetingTime,
-            recipients: selectedUsers,
-          }
-        : link
-    )
-  );
+      const payload = {
+        title: meetingTitle,
+        link: meetingLink,
+        date_and_time: dateTimeISO,
+        scheme,
+      };
 
-  setSuccessMsg("Meeting updated successfully!");
+      await axiosClient.put(`/vpc/edit-meeting/${editMeetingId}/`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      } else {
-    
-        const payload = {
-          title: meetingTitle,
-          link: meetingLink,
-          date_and_time: dateTimeISO,
-          invitees: selectedUsers.map(u => u.item_id),
-        };
+      setSharedLinks(prev =>
+        prev.map(link =>
+          link.id === editMeetingId
+            ? {
+                ...link,
+                title: meetingTitle,
+                url: meetingLink,
+                date: meetingDate,
+                time: meetingTime,
+                recipients: selectedUsers,
+              }
+            : link
+        )
+      );
 
-        const res = await axiosClient.post("/vpc/schedule-meeting/", payload, {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
+      toast.success("Meeting updated successfully!");
+      setSuccessMsg("Meeting updated successfully!");
+    } else {
+      const payload = {
+        title: meetingTitle,
+        link: meetingLink,
+        date_and_time: dateTimeISO,
+        invitees: selectedUsers.map(u => u.item_id),
+      };
 
-        const newLink = {
-          id: res.data?.id || res.data?._id,
-          title: meetingTitle,
-          url: meetingLink,
-          date: meetingDate,
-          time: meetingTime,
-          recipients: selectedUsers,
-        };
+      const res = await axiosClient.post("/vpc/schedule-meeting/", payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        setSharedLinks(prev => [newLink, ...prev]);
-         toast.success("Meeting link shared successfully!");
-      }
+      const newLink = {
+        id: res.data?.id || res.data?._id,
+        title: meetingTitle,
+        url: meetingLink,
+        date: meetingDate,
+        time: meetingTime,
+        recipients: selectedUsers,
+      };
 
-      resetForm();
-    } catch (err) {
-      console.error("Submit failed:", err.response?.data || err.message);
-      setError("Failed to submit meeting.");
+      setSharedLinks(prev => [newLink, ...prev]);
+      toast.success("Meeting link shared successfully!");
     }
-  };
 
-  const handleEdit = (link) => {
-    setMeetingTitle(link.title);
-    setMeetingLink(link.url);
-    setMeetingDate(link.date);
-    setMeetingTime(link.time);
-    setSelectedUsers(link.recipients || []);
-    setPreviousRecipients(link.recipients || []);
-    setEditMeetingId(link.id);
-    setSuccessMsg("");
-    setError("");
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+    resetForm();
+  } catch (err) {
+    console.error("Submit failed:", err.response?.data || err.message);
+    setError("Failed to submit meeting.");
+    toast.error("Failed to submit meeting.");
+  }
+};
+
+
+ const handleEdit = (link) => {
+  setMeetingTitle(link.title);
+  setMeetingLink(link.url);
+  setMeetingDate(link.date);
+  setMeetingTime(link.time);
+
+const fullRecipients = link.recipients.map(user => {
+  return users.find(u => u.item_id === user.item_id) || user;
+});
+setSelectedUsers(fullRecipients);
+setPreviousRecipients(fullRecipients);
+  
+
+  setSelectedUsers(fullRecipients);
+  setPreviousRecipients(fullRecipients);
+  setEditMeetingId(link.id);
+  setSuccessMsg("");
+  setError("");
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this meeting?")) return;

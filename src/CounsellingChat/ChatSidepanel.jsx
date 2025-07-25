@@ -21,7 +21,6 @@ useEffect(() => {
           try {
             const res = await axiosClient.get(`/vpc/get-messages/${chat.item_id}/`);
             const messages = Array.isArray(res.data) ? res.data : res.data.fullMessages || res.data.messages || [];
-            // 🔧 Ensure messages are sorted by date
             messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
             const lastMessage = messages.length ? messages[messages.length - 1] : null;
@@ -85,7 +84,7 @@ useEffect(() => {
 }
 
   };
-
+const unreadSet = new Set(unreadIds);
   return (
     <aside className="w-full md:w-80 bg-white border-r p-4 space-y-4 h-full overflow-y-auto">
       <input
@@ -139,6 +138,7 @@ useEffect(() => {
             {filteredChats.length === 0 ? (
               <li className="p-2 text-gray-400">No recent chats</li>
             ) : (
+              
               filteredChats.map((chat) => {
                 const partnerData = isStudent ? chat.counselor_data : chat.user_data;
                 const fullname =
@@ -198,13 +198,3 @@ useEffect(() => {
 };
 
 export default ChatSidepanel;
-
-
-
-
-
-
-
-
-
-

@@ -107,7 +107,7 @@ const mentor_id = contextMentorId;
   const existing = availability[key] || [];
 
   if (existing.includes(newTimeSlot)) {
-    setMessage(' Slot already added.');
+    toast.error('Slot already added.');
     return;
   }
 
@@ -117,7 +117,7 @@ const mentor_id = contextMentorId;
   };
   setAvailability(updated);
   setNewTimeSlot('');
-  setMessage('✅ Slot added.');
+  toast.success('✅ Slot added.');
 };
 
   const handleRemoveSlot = (slot) => {
@@ -127,7 +127,7 @@ const mentor_id = contextMentorId;
       [key]: availability[key].filter((t) => t !== slot),
     };
     setAvailability(updated);
-    setMessage('🗑️ Slot removed.');
+     toast.warn('🗑️ Slot removed.');
   };
 
 const handleSave = async () => {
@@ -153,13 +153,13 @@ const handleSave = async () => {
     );
 
     console.log('✅ Saved:', res.data);
-    setMessage('✅ Availability saved.');
+   toast.success('✅ Availability saved.');
 
     // await fetchAvailability();       
     // setSelectedDate(prevSelected);     
   } catch (error) {
     console.error('Failed to save availability:', error);
-    setMessage(' Failed to save availability.');
+    toast.error('❌ Failed to save availability.');
   }
 };
 

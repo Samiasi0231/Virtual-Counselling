@@ -36,6 +36,7 @@ const CounselorSchedule = () => {
       setBookings(parsed.filter((b) => b.dateObj > new Date()));
     } catch (err) {
       console.error('Error fetching bookings:', err);
+     toast.error(' Error fetching bookings.');
     }
   };
 
@@ -51,14 +52,16 @@ const CounselorSchedule = () => {
       });
 
       setBookings((prev) => prev.filter((b) => b.id !== id));
+        toast.success('✅ Booking removed successfully.');
     } catch (err) {
       console.error('Delete failed:', err);
+     toast.error('Failed to delete booking.');
     }
   };
 
   useEffect(() => {
     fetchBookings();
-    const interval = setInterval(fetchBookings, 30000); // 30s refresh
+    const interval = setInterval(fetchBookings, 30000); 
     return () => clearInterval(interval);
   }, []);
 
@@ -103,7 +106,7 @@ const CounselorSchedule = () => {
       };
 
       updateCountdown();
-      const interval = setInterval(updateCountdown, 60000); // update every minute
+      const interval = setInterval(updateCountdown, 60000); 
       return () => clearInterval(interval);
     }, [booking.dateObj]);
 

@@ -27,6 +27,10 @@ const getAnonymousForChat = (chatId) => {
 };
 
 const ChatPage = ({ initialRole = 'student' }) => {
+  const scrollContainerRef = useRef(null);
+const [page, setPage] = useState(1); // for pagination
+const [hasMoreMessages, setHasMoreMessages] = useState(true);
+
    const navigate = useNavigate();
   const websocketRef = useRef(null);
   const location = useLocation();
@@ -71,6 +75,86 @@ const extractFileData = (data) => {
   }
   return { file: null, fileType: null };
 };
+
+const loadOlderMessages = async () => {
+  if (!chatSession?.item_id || !token) return;
+
+  const container = scrollContainerRef.current;
+  const prevScrollHeight = container?.scrollHeight;
+
+  setLoadingMessages(true);
+
+  try {
+    const res = await axiosClient.get(
+      `/vpc/get-messages/${chatSession.item_id}/?page=${page + 1}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const olderMessages = Array.isArray(res.data.messages) ? res.data.messages : [];
+
+    if (olderMessages.length === 0) {
+      setHasMoreMessages(false);
+      return;
+    }
+
+    const formatted = olderMessages.map((msg) => {
+      const isFromCurrentUser = msg.from_counselor
+        ? userType === 'counsellor'
+        : userType === 'student';
+
+      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+      const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+      return {
+        ...msg,
+        isFromCurrentUser,
+        file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+        fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+        text: msg.text || '',
+        time: new Date(msg.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        groupDate: formatMessageDate(msg.created_at),
+        studentAnonymous: msg.anonymous ?? false,
+        senderLastName: lastname,
+      };
+    });
+
+    setMessages(prev => [...formatted, ...prev]);
+    setPage(prev => prev + 1);
+
+    setTimeout(() => {
+      const newScrollHeight = container?.scrollHeight;
+      container.scrollTop = newScrollHeight - prevScrollHeight;
+    }, 100);
+  } catch (err) {
+    console.error('Failed to load older messages:', err);
+  } finally {
+    setLoadingMessages(false);
+  }
+};
+
+
+
+useEffect(() => {
+  const container = scrollContainerRef.current;
+  if (!container || !chatSession?.item_id) return;
+
+  const handleScroll = () => {
+    if (container.scrollTop === 0 && hasMoreMessages && !loadingMessages) {
+      loadOlderMessages();
+    }
+  };
+
+  container.addEventListener('scroll', handleScroll);
+  return () => container.removeEventListener('scroll', handleScroll);
+}, [chatSession?.item_id, hasMoreMessages, loadingMessages]);
+
+
+
 
   const isStudentAnonymous = chatSession?.user_anonymous;
 
@@ -195,17 +279,6 @@ fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type |
       if (!chatSession) {
   setPartnerInfo(partnerData); 
 }
-
-useEffect(() => {
-  if (!chatSession) return;
-
-  const data = isStudent ? chatSession.counselor_data : chatSession.user_data;
-  if (data) {
-    setPartnerInfo(data);
-  }
-}, [chatSession, isStudent]);
-
-
       setChatSession({
         item_id: chatIdToUse,
         user_anonymous: false,
@@ -228,6 +301,15 @@ useEffect(() => {
 
   fetchChatFromQueryParam();
 }, [chatIdToUse, isStudent, userType, token]);
+
+useEffect(() => {
+  if (!chatSession) return;
+
+  const data = isStudent ? chatSession.counselor_data : chatSession.user_data;
+  if (data) {
+    setPartnerInfo(data);
+  }
+}, [chatSession, isStudent]);
 
 
 useEffect(() => {
@@ -309,7 +391,14 @@ const newMsg = {
   senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
   senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
 };
-
+if (data?.type === 'seen_update' && data.userId && Array.isArray(data.messageIds)) {
+  setMessages(prev =>
+    prev.map(msg =>
+      data.messageIds.includes(msg.item_id)
+        ? { ...msg, seen_users: [...(msg.seen_users || []), data.userId] }
+        : msg
+    )
+  )}
 
       // setMessages((prev) => {
       //   const filtered = prev.filter(
@@ -333,11 +422,6 @@ setMessages((prev) => {
 
   return [...filtered, newMsg];
 });
-
-
-
-
-
     }
 
 
@@ -415,6 +499,40 @@ const label = msg.groupDate || formatMessageDate(msg.created_at);
   groups[label].push(msg);
   return groups;
 }, {});
+
+useEffect(() => {
+  if (!messages || !Array.isArray(messages) || !websocketRef.current || websocketRef.current.readyState !== WebSocket.OPEN) return;
+
+  const currentUserId = contextUser?.item_id;
+  if (!currentUserId || !chatSession?.item_id) return;
+
+  const unseenMessages = messages.filter(
+    (msg) => !msg.isFromCurrentUser && !msg.seen_users?.includes(currentUserId)
+  );
+
+  if (unseenMessages.length === 0) return;
+
+  const unseenIds = unseenMessages.map((msg) => msg.item_id);
+
+  websocketRef.current.send(JSON.stringify({
+    type: 'mark_seen',
+    chatId: chatSession.item_id,
+    userId: currentUserId,
+    messageIds: unseenIds,
+  }));
+
+  
+  setMessages(prev =>
+    prev.map(msg =>
+      unseenIds.includes(msg.item_id)
+        ? { ...msg, seen_users: [...(msg.seen_users || []), currentUserId] }
+        : msg
+    )
+  );
+}, [messages, contextUser, chatSession]);
+
+
+
 
 return (
   <div className='h-screen bg-gray-100'>
@@ -496,7 +614,8 @@ return (
             </div>
           )}
         </div>
-<div className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
+<div  ref={scrollContainerRef}
+className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
   {loadingMessages && (
     <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
       <span className="text-sm text-gray-500">Loading messages...</span>
@@ -504,12 +623,12 @@ return (
   )}
 
  {Object.entries(groupedMessages).map(([date, msgs]) => (
-  <div key={date}>
+  <div key={`group-${date}-${msgs[0]?.id || date}`}>
     <div className="text-center text-xs text-gray-500 my-3">{date}</div>
 
-    {msgs.map(msg => (
+    {msgs.map((msg,index)=> (
       <div
-        key={msg.id}
+     key={msg.id || `msg-${index}`}
         className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
       >
         {!msg.isFromCurrentUser && (
