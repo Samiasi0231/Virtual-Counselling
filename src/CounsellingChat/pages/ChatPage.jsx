@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef,useMemo,useCallback } from 'react';
 import { useLocation,useNavigate,useSearchParams } from 'react-router-dom';
 import { FiSend, FiPaperclip, FiUser, FiUserX, FiMenu } from 'react-icons/fi';
 import { useStateValue } from '../../Context/UseStateValue';
+import { useChatContext } from "../../Auth/ChatContex"
 import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
 import {formatMessageDate} from "../../utils/time"
 import Avatar from 'react-avatar';
 const getAnonymousMap = () => {
+
   try {
     const stored = localStorage.getItem('anonymous_map');
     return stored ? JSON.parse(stored) : {};
@@ -26,9 +28,22 @@ const getAnonymousForChat = (chatId) => {
   return map[chatId] ?? false;
 };
 
+
+
 const ChatPage = ({ initialRole = 'student' }) => {
+  
+const {
+  chatSession,
+  setChatSession,
+  chatMap,
+  setChatMap,
+  sendMessage,
+  updateSeenUsers,
+} = useChatContext();
+
+
+const messages = chatMap[chatSession?.item_id] || [];
   const scrollContainerRef = useRef(null);
-const [page, setPage] = useState(1); // for pagination
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
 
    const navigate = useNavigate();
@@ -44,10 +59,8 @@ const chatIdToUse = chatIdFromURL || storedChatId;
   const token = userType === 'student' ? studentToken : counsellorToken;
   const isStudent = userType === 'student';
   const [unreadIds, setUnreadIds] = useState([]);
-  const [chatSession, setChatSession] = useState(null);
   const [partnerInfo, setPartnerInfo] = useState(null);
   const [anonymous, setAnonymous] = useState(false);
-  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [typing, setTyping] = useState(false);
   const [file, setFile] = useState(null);
@@ -86,7 +99,7 @@ const loadOlderMessages = async () => {
 
   try {
     const res = await axiosClient.get(
-      `/vpc/get-messages/${chatSession.item_id}/?page=${page + 1}`,
+      `/vpc/get-messages/${chatSession.item_id}/`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -122,9 +135,12 @@ const loadOlderMessages = async () => {
         senderLastName: lastname,
       };
     });
-
-    setMessages(prev => [...formatted, ...prev]);
+setChatMap(prev => ({
+  ...prev,
+  [chatSession.item_id]: [...formatted, ...(prev[chatSession.item_id] || [])],
+}));
     setPage(prev => prev + 1);
+ 
 
     setTimeout(() => {
       const newScrollHeight = container?.scrollHeight;
@@ -181,7 +197,7 @@ useEffect(() => {
    const handleChatSelect = useCallback((fullMessages, partnerData, messages, sessionData) => {
     setPartnerInfo(partnerData);
     const msgList = fullMessages || messages || [];
-    setMessages(msgList);
+   setChatMap(prev => ({ ...prev, [sessionData.item_id]: msgList }));
     localStorage.setItem('lastChatId', sessionData.item_id);
     setChatSession(sessionData);
     const unread = msgList.filter(msg => !msg.read && msg.sender !== userType).map(msg => msg.id);
@@ -217,7 +233,10 @@ useEffect(() => {
       if (cached) {
         const parsedCached = JSON.parse(cached);
         if (Array.isArray(parsedCached)) {
-          setMessages(parsedCached); 
+          setChatMap(prev => ({
+      ...prev,
+      [chatIdToUse]: parsedCached,
+    }));
         }
       }
       const res = await axiosClient.get(`/vpc/get-messages/${chatIdToUse}/`, {
@@ -258,7 +277,11 @@ fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type |
         : [];
 
     
-      setMessages(msgArray); 
+      setChatMap(prev => ({
+  ...prev,
+  [chatIdToUse]: msgArray,
+}));
+
       localStorage.setItem(
         `chat_messages_${chatIdToUse}`,
         JSON.stringify(msgArray)
@@ -365,65 +388,60 @@ const toggleAnonymous = async () => {
     ws.onopen = () => console.log('[WebSocket] Connected');
     ws.onerror = (e) => console.error('[WebSocket] Error:', e);
     ws.onclose = () => console.log('[WebSocket] Disconnected');
-
-  ws.onmessage = (event) => {
+ws.onmessage = (event) => {
   try {
     const data = JSON.parse(event.data);
 
     if (data?.text && data?.item_id) {
-      const now = new Date();
+      const createdAt = new Date(data.created_at || Date.now()); // ✅ Use backend timestamp
       const sender = data.sender || (data.from_counselor ? 'counsellor' : 'student');
       const isFromCurrentUser = sender === userType;
+      const { file, fileType } = extractFileData(data);
 
-const { file, fileType } = extractFileData(data);
+      const newMsg = {
+        id: data.item_id,
+        clientMessageId: data.clientMessageId || null, // ✅ Needed for deduplication
+        sender,
+        text: data.text,
+        file,
+        fileType,
+        time: createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // ✅ Use same timestamp
+        groupDate: formatMessageDate(createdAt), // ✅ Correct date grouping
+        read: false,
+        studentAnonymous: data.anonymous ?? false,
+        isFromCurrentUser,
+        senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
+        senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
+      };
 
-const newMsg = {
-  id: data.item_id || now.getTime(),
-  sender,
-  text: data.text,
-  file,        
-  fileType,     
-  time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  groupDate: formatMessageDate(now),
-  read: false,
-  studentAnonymous: data.anonymous ?? false,
-  isFromCurrentUser,
-  senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
-  senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
-};
-if (data?.type === 'seen_update' && data.userId && Array.isArray(data.messageIds)) {
-  setMessages(prev =>
-    prev.map(msg =>
-      data.messageIds.includes(msg.item_id)
-        ? { ...msg, seen_users: [...(msg.seen_users || []), data.userId] }
-        : msg
-    )
-  )}
+      // ✅ Deduplicate using clientMessageId
+      setChatMap((prev) => {
+        const existing = prev[chatSession.item_id] || [];
 
-      // setMessages((prev) => {
-      //   const filtered = prev.filter(
-      //     (msg) =>
-      //       msg.id !== newMsg.id &&
-      //       !(msg.id?.startsWith('temp') && msg.text === data.text)
-      //   );
-      //   return [...filtered, newMsg];
-      // });
-setMessages((prev) => {
-  const safePrev = Array.isArray(prev) ? prev : [];
-  const filtered = safePrev.filter((msg) => {
-    const isTemp = msg.id?.startsWith('temp');
-    const matchesText = msg.text === data.text;
-    const matchesFile = file &&
-      msg.file?.startsWith('blob:') &&
-      msg.fileType === (data.attachments?.[0]?.attachments_type || data.fileType);
+        const filtered = existing.filter((msg) => {
+          if (data.clientMessageId && msg.clientMessageId) {
+            return msg.clientMessageId !== data.clientMessageId;
+          }
+          return !(msg.id?.startsWith('temp') && msg.text === data.text);
+        });
 
-    return !(isTemp && (matchesText || matchesFile));
-  });
-
-  return [...filtered, newMsg];
-});
+        return {
+          ...prev,
+          [chatSession.item_id]: [...filtered, newMsg],
+        };
+      });
     }
 
+    if (data?.type === 'seen_update' && data.userId && Array.isArray(data.messageIds)) {
+      setChatMap(prev => ({
+        ...prev,
+        [chatSession.item_id]: (prev[chatSession.item_id] || []).map(msg =>
+          data.messageIds.includes(msg.item_id)
+            ? { ...msg, seen_users: [...new Set([...(msg.seen_users || []), data.userId])] }
+            : msg
+        )
+      }));
+    }
 
     if (data?.type === 'typing' && data.sender !== userType) {
       setTyping(data);
@@ -434,56 +452,41 @@ setMessages((prev) => {
   }
 };
 
+
   return () => {
       ws.close();
     };
   }, [chatSession?.item_id, userType, token]);
 
-  const handleSend = async () => {
-    if ((!newMessage.trim() && !file) || !chatSession?.item_id || !token) return;
+const handleSend = async () => {
+  if ((!newMessage.trim() && !file) || !chatSession?.item_id || !token) return;
 
-    const now = new Date();
-    const tempId = `temp-${Date.now()}`;
+ const now = new Date();
+const clientMessageId = `client-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+const tempId = `temp-${now.getTime()}`;
 
-  setMessages((prev) => [
-  ...prev,
-  {
-    id: tempId,
-    sender: userType,
-    text: newMessage,
-    file: file ? URL.createObjectURL(file) : null,
-    fileType: file?.type?.startsWith('image') ? 'image' : 'file',
-    time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    groupDate: formatMessageDate(now), 
-    read: false,
-    isFromCurrentUser: true,     
-    studentAnonymous: isStudent ? anonymous : false,
-    senderFullname: contextUser?.fullname || '', 
-    senderAvatar: normalizeProfilePhoto(contextUser?.profilePhoto),
-  },
-]);
-    setNewMessage('');
-    setFile(null);
-    setTyping(false);
 
-    try {
-      const formData = new FormData();
-      if (newMessage.trim()) formData.append('text', newMessage.trim());
-   if (file) formData.append('attachments', file);
-      await axiosClient.post(
-        `/vpc/create-message/${chatSession.item_id}/`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Message send failed:', error.response?.data || error.message);
-    }
-  };
+  setNewMessage('');
+  setFile(null);
+  setTyping(false);
+
+
+  try {
+    await sendMessage({
+      chatId: chatSession.item_id,
+      text: newMessage.trim(),
+      file,
+      userType,
+      token,
+      contextUser,
+      isStudent,
+      anonymous,
+      clientMessageId, 
+    });
+  } catch (error) {
+    console.error('[handleSend] Message send failed:', error?.response?.data || error.message);
+  }
+};
 
 const getSenderName = (msg) => {
   if (msg.isFromCurrentUser) return 'You';
@@ -521,14 +524,14 @@ useEffect(() => {
     messageIds: unseenIds,
   }));
 
-  
-  setMessages(prev =>
-    prev.map(msg =>
-      unseenIds.includes(msg.item_id)
-        ? { ...msg, seen_users: [...(msg.seen_users || []), currentUserId] }
-        : msg
-    )
-  );
+  setChatMap(prev => ({
+  ...prev,
+  [chatSession.item_id]: (prev[chatSession.item_id] || []).map(msg =>
+    unseenIds.includes(msg.item_id)
+      ? { ...msg, seen_users: [...new Set([...(msg.seen_users || []), currentUserId])] }
+      : msg
+  ),
+}));
 }, [messages, contextUser, chatSession]);
 
 
@@ -684,7 +687,11 @@ className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
               msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
             }`}
           >
-            {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
+         {msg.isFromCurrentUser
+  ? msg.seen_users?.includes(partnerInfo?.item_id)
+    ? '✓✓'
+    : '✓'
+  : ''}
             {msg.time}
           </span>
         </div>

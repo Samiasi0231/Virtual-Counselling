@@ -1,52 +1,36 @@
-
-import React, { useEffect, useState } from "react";
+ import React, { useEffect, useState } from "react";
 import axiosClient from "../utils/axios-client-analytics";
 import { FiChevronRight } from "react-icons/fi";
 import Avatar from 'react-avatar'; 
 import getRelativeTime from "../utils/time";
+import { useChatContext } from "../Auth/ChatContex";
 
-const ChatSidepanel = ({ onChatSelect, partner, isStudent, activeChatId, unreadIds = [] }) => {
+const ChatSidepanel = ({ onChatSelect, partner, isStudent, activeChatId, unreadCounts = {} }) => {
   const [recentChats, setRecentChats] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [usersOpen, setUsersOpen] = useState(true);
   const [chatsOpen, setChatsOpen] = useState(true);
-useEffect(() => {
-  const fetchRecentChats = async () => {
-    try {
-      const res = await axiosClient.get("/vpc/get-chat-rooms/");
-      const rooms = res.data;
+const {
+  setChatSession,      
+  chatSession,
+  chatMap,
+  setChatMap,
+  fetchChatMessages,
+  ...rest 
+} = useChatContext();
+  useEffect(() => {
+    const fetchRecentChats = async () => {
+      try {
+        const res = await axiosClient.get("/vpc/get-chat-rooms/");
+        const rooms = res.data;
+        setRecentChats(rooms);
+      } catch (err) {
+        console.error("Error fetching chat rooms:", err);
+      }
+    };
 
-      const updatedChats = await Promise.all(
-        rooms.map(async (chat) => {
-          try {
-            const res = await axiosClient.get(`/vpc/get-messages/${chat.item_id}/`);
-            const messages = Array.isArray(res.data) ? res.data : res.data.fullMessages || res.data.messages || [];
-            messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-
-            const lastMessage = messages.length ? messages[messages.length - 1] : null;
-
-            return {
-              ...chat,
-              messages,
-              last_message: lastMessage,
-            };
-          } catch (err) {
-            console.error(`Error fetching messages for chat ${chat.item_id}`, err);
-            return chat;
-          }
-        })
-      );
-
-      // ✅ Check what you're setting in state
-      // console.log("Recent chats with last messages:", updatedChats);
-      setRecentChats(updatedChats);
-    } catch (err) {
-      console.error("Error fetching recent chats:", err);
-    }
-  };
-
-  fetchRecentChats();
-}, []);
+    fetchRecentChats();
+  }, []);
 
   const filteredChats = recentChats.filter((chat) => {
     const partnerData = isStudent ? chat.counselor_data : chat.user_data;
@@ -55,36 +39,30 @@ useEffect(() => {
   });
 
   const handleChatSelect = async (chatId) => {
-      if (chatId === activeChatId) return;
+    if (chatId === activeChatId) return;
+
     try {
-      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`);
-      const data = res.data;
+      const messages = await fetchChatMessages(chatId); // 🔁 Use context fetch logic
 
       const chat = recentChats.find((c) => c.item_id === chatId);
       const partnerData = isStudent
-        ? data.counselor_data || chat?.counselor_data
-        : data.user_data || chat?.user_data;
+        ? chat?.counselor_data
+        : chat?.user_data;
 
       onChatSelect(
-        data.fullMessages || data.messages || [],
+        messages,
         partnerData,
-        data.messages || [],
+        messages,
         {
           item_id: chatId,
           user_anonymous: chat.user_anonymous ?? false,
         }
       );
     } catch (err) {
-  const status = err?.response?.status;
-  if (status === 500) {
-    console.error("Server error. Try again later.");
-  } else {
-    console.error("Error fetching messages:", err);
-  }
-}
-
+      console.error("Error selecting chat:", err);
+    }
   };
-const unreadSet = new Set(unreadIds);
+
   return (
     <aside className="w-full md:w-80 bg-white border-r p-4 space-y-4 h-full overflow-y-auto">
       <input
@@ -138,24 +116,22 @@ const unreadSet = new Set(unreadIds);
             {filteredChats.length === 0 ? (
               <li className="p-2 text-gray-400">No recent chats</li>
             ) : (
-              
               filteredChats.map((chat) => {
                 const partnerData = isStudent ? chat.counselor_data : chat.user_data;
                 const fullname =
                   partnerData?.fullname ||
                   `${partnerData?.firstname || ""} ${partnerData?.lastname || ""}`.trim();
-              const preview = chat.last_message?.text?.trim()
-  ? chat.last_message.text.slice(0, 5)
-  : "[No message yet]";
 
-
-                const createdAt = chat.last_message?.created_at;
+                const lastMessage = (chatMap[chat.item_id] || []).slice(-1)[0];
+                const preview = lastMessage?.text?.trim()
+                  ? lastMessage.text.slice(0, 30)
+                  : "[No message yet]";
+                const createdAt = lastMessage?.created_at || lastMessage?.time;
                 const timePreview = createdAt ? getRelativeTime(new Date(createdAt)) : "";
                 const avatarUrl =
                   partnerData?.profilePhoto?.best || partnerData?.profilePhoto || partnerData?.avatar || null;
 
-                const unreadCount = (chat.messages || []).filter(msg => unreadSet.has(msg.item_id)).length;
-
+                const unreadCount = unreadCounts[chat.item_id] || 0;
 
                 return (
                   <li

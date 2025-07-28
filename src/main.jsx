@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter as Router } from 'react-router-dom';
 import ThemeProvider from './utils/ThemeContext';
 import App from './App';
+import ChatProvider from "./Auth/ChatContex"
 import { initialState} from './Context/InitialState';
 import { reducer } from './Context/Reducer';
 import 'react-toastify/dist/ReactToastify.css'; 
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <Router>
       <ThemeProvider>
         <StateProvider initialState={initialState} reducer={reducer}>
+          <ChatProvider>
         <App />
+      </ChatProvider>
         <ToastWrapper/>
       </StateProvider>
       </ThemeProvider>
