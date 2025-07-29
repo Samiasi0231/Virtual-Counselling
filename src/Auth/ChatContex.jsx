@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState } from 'react';
 import axiosClient from '../utils/axios-client-analytics';
 import {formatMessageDate} from "../utils/time"
+import { dedupeMessages } from '../utils/message';
 const ChatContext = createContext();
 export const useChatContext = () => useContext(ChatContext);
 
@@ -12,38 +13,53 @@ const ChatProvider = ({ children }) => {
   const [unreadIds, setUnreadIds] = useState([]);
   const [loadingChats, setLoadingChats] = useState(false);
 
-  const fetchChatMessages = async (chatId, token) => {
-    if (!chatId || !token || chatMap[chatId]) return chatMap[chatId];
+ const fetchChatMessages = async (chatId, token) => {
+  if (!chatId || !token) return [];
 
-    setLoadingChats(true);
+  const localKey = `chat_messages_${chatId}`;
+  const cached = localStorage.getItem(localKey);
+  let localMessages = [];
+
+  if (cached) {
     try {
-      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const raw = res.data.messages || res.data.fullMessages || res.data || [];
-
-      const messages = raw.map((msg) => ({
-        ...msg,
-        seen_users: msg.seen_users || [],
-          groupDate: formatMessageDate(msg.created_at),
+      localMessages = JSON.parse(cached);
+      setChatMap(prev => ({
+        ...prev,
+        [chatId]: dedupeMessages([...(prev[chatId] || []), ...localMessages]),
       }));
-
-      setChatMap(prev => ({ ...prev, [chatId]: messages }));
-
-      const unread = messages
-  .filter(msg => !msg.read && !msg.seen_users?.includes(contextUser?.item_id))
-  .map(msg => msg.item_id);
-
-
-      return messages;
-    } catch (err) {
-      console.error('[ChatContext] Failed to fetch chat:', err);
-      return [];
-    } finally {
-      setLoadingChats(false);
+    } catch (e) {
+      console.error('Invalid cache for', chatId);
     }
-  };
+  }
+
+  try {
+    const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const raw = res.data.messages || res.data.fullMessages || res.data || [];
+    const serverMessages = raw.map(msg => ({
+      ...msg,
+      groupDate: formatMessageDate(msg.created_at),
+      seen_users: msg.seen_users || [],
+    }));
+
+    const merged = dedupeMessages([...localMessages, ...serverMessages]);
+
+    setChatMap(prev => ({
+      ...prev,
+      [chatId]: merged,
+    }));
+
+    localStorage.setItem(localKey, JSON.stringify(merged.slice(-200)));
+
+    return merged;
+  } catch (err) {
+    console.error('[ChatContext] fetchChatMessages failed:', err);
+    return [];
+  }
+};
+
 
   const updateSeenUsers = (chatId, messageIds, userId) => {
     if (!chatMap[chatId]) return;
@@ -85,11 +101,15 @@ const ChatProvider = ({ children }) => {
       senderAvatar: contextUser?.profilePhoto?.best || contextUser?.profilePhoto || null,
     };
 
-    setChatMap(prev => ({
-      ...prev,
-      [chatId]: [...(prev[chatId] || []), optimisticMessage],
-    }));
-
+setChatMap(prev => {
+  const updated = dedupeMessages([...(prev[chatId] || []), optimisticMessage]).slice(-200);
+  localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(updated));
+  
+  return {
+    ...prev,
+    [chatId]: updated,
+  };
+});
     try {
       const formData = new FormData();
       if (text) formData.append('text', text);

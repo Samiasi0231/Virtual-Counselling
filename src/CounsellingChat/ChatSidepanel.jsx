@@ -10,6 +10,7 @@ const ChatSidepanel = ({ onChatSelect, partner, isStudent, activeChatId, unreadC
   const [searchTerm, setSearchTerm] = useState('');
   const [usersOpen, setUsersOpen] = useState(true);
   const [chatsOpen, setChatsOpen] = useState(true);
+
 const {
   setChatSession,      
   chatSession,
@@ -42,14 +43,14 @@ const {
     if (chatId === activeChatId) return;
 
     try {
-      const messages = await fetchChatMessages(chatId); // 🔁 Use context fetch logic
+      const messages = await fetchChatMessages(chatId); 
 
       const chat = recentChats.find((c) => c.item_id === chatId);
       const partnerData = isStudent
         ? chat?.counselor_data
         : chat?.user_data;
 
-      onChatSelect(
+      onChatSelect?.(
         messages,
         partnerData,
         messages,
@@ -58,6 +59,10 @@ const {
           user_anonymous: chat.user_anonymous ?? false,
         }
       );
+
+      setChatSession({
+      item_id: chatId,
+      user_anonymous: chat.user_anonymous ?? false})
     } catch (err) {
       console.error("Error selecting chat:", err);
     }
