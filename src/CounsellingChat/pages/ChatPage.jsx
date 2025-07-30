@@ -29,6 +29,11 @@ const getAnonymousForChat = (chatId) => {
   return map[chatId] ?? false;
 };
 
+const isUserNearBottom = (container, threshold = 120) => {
+  return (
+    container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+  );
+};
 
 
 const ChatPage = ({ initialRole = 'student' }) => {
@@ -45,6 +50,7 @@ const {
 
   const scrollContainerRef = useRef(null);
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
+const [userIsNearBottom, setUserIsNearBottom] = useState(true);
 
    const navigate = useNavigate();
   const websocketRef = useRef(null);
@@ -103,25 +109,22 @@ const extractFileData = (data) => {
   }
   return { file: null, fileType: null };
 };
+
 const loadOlderMessages = async () => {
-  if (!chatSession?.item_id || !token) return;
+  if (!chatSession?.item_id || !token || loadingMessages) return;
 
-  const container = scrollContainerRef.current;
-  const prevScrollHeight = container?.scrollHeight;
-
+  const offset = chatMap[chatSession.item_id]?.length || 0;
   setLoadingMessages(true);
 
   try {
-    const offset = chatMap[chatSession.item_id]?.length || 0;
-
     const res = await axiosClient.get(
-      `/vpc/get-messages/${chatSession.item_id}/?offset=${offset}&limit=20`,
+      `/vpc/get-messages/${chatSession.item_id}/?offset=${offset}&limit=10`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const olderMessages = Array.isArray(res.data.messages) ? res.data.messages : [];
+    const olderMessages = res.data?.messages || [];
 
-    if (olderMessages.length === 0) {
+    if (olderMessages.length === 0 || !res.data?.has_more) {
       setHasMoreMessages(false);
       return;
     }
@@ -135,25 +138,43 @@ const loadOlderMessages = async () => {
         minute: '2-digit',
       }),
       groupDate: formatMessageDate(msg.created_at),
-      studentAnonymous: msg.anonymous ?? false,
       seen_users: msg.seen_users || [],
     }));
 
-    setChatMap(prev => ({
-      ...prev,
-      [chatSession.item_id]: dedupeMessages([...formatted, ...(prev[chatSession.item_id] || [])]),
-    }));
+    setChatMap(prev => {
+      const updated = dedupeMessages([
+        ...formatted,
+        ...(prev[chatSession.item_id] || []),
+      ]);
 
-    setTimeout(() => {
-      const newScrollHeight = container?.scrollHeight;
-      if (container) container.scrollTop = newScrollHeight - prevScrollHeight;
-    }, 100);
+      // 🔐 Persist updated message list to localStorage
+      localStorage.setItem(
+        `chat_messages_${chatSession.item_id}`,
+        JSON.stringify(updated.slice(-200))
+      );
+
+      return {
+        ...prev,
+        [chatSession.item_id]: updated,
+      };
+    });
   } catch (err) {
     console.error('Failed to load older messages:', err);
   } finally {
     setLoadingMessages(false);
   }
 };
+
+
+useEffect(() => {
+  const container = scrollContainerRef.current;
+  if (!container) return;
+
+ 
+  if (userIsNearBottom) {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
+}, [messages, userIsNearBottom]);
 
 
 useEffect(() => {
@@ -225,7 +246,7 @@ useEffect(() => {
   }, [typing, userType, chatSession]);
 
 useEffect(() => {
-  // Define async function inside useEffect scope
+
   const fetchChatFromQueryParam = async () => {
     if (!chatIdToUse || !token) return;
 
@@ -360,15 +381,21 @@ useEffect(() => {
     }
   }, [messages]);
 
-  // ⬇️⬇️⬇️ PLACE THIS INSIDE ChatPage.jsx, anywhere with other useEffects
+useEffect(() => {
+  if (chatSession?.item_id && token) {
+ fetchChatMessages(chatSession.item_id, token, true);
+  }
+}, [chatSession?.item_id, token]);
+
+
 useEffect(() => {
   const handleVisibilityChange = () => {
     if (
-      document.visibilityState === 'visible' &&        // ✅ tab became active
-      chatSession?.item_id &&                          // ✅ chat ID exists
-      token                                             // ✅ token exists
+      document.visibilityState === 'visible' &&        
+      chatSession?.item_id &&                          
+      token                                            
     ) {
-      fetchChatMessages(chatSession.item_id, token);   // ✅ call your context function
+    fetchChatMessages(chatSession.item_id, token, true);  
     }
   };
 
@@ -384,9 +411,9 @@ useEffect(() => {
       chatSession?.item_id &&
       token
     ) {
-      fetchChatMessages(chatSession.item_id, token);   // ✅ fetch from backend every 15s
+     fetchChatMessages(chatSession.item_id, token, true);  
     }
-  }, 15000); // ⏱️ every 15 seconds
+  }, 15000); 
 
   return () => clearInterval(interval);
 }, [chatSession?.item_id, token, fetchChatMessages]);
@@ -679,6 +706,18 @@ return (
         </div>
 <div  ref={scrollContainerRef}
 className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
+{hasMoreMessages && (
+  <div className="text-center my-2">
+    <button
+      onClick={loadOlderMessages}
+      disabled={loadingMessages}
+      className="px-3 py-1 bg-gray-200 rounded text-sm"
+    >
+      {loadingMessages ? "Loading..." : "Load older messages"}
+    </button>
+  </div>
+)}
+
   {loadingMessages && (
     <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
       <span className="text-sm text-gray-500">Loading messages...</span>
@@ -768,6 +807,18 @@ className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
   )}
 
   <div ref={messagesEndRef} />
+
+  {!userIsNearBottom && (
+  <button
+    onClick={() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }}
+    className="fixed bottom-24 right-4 z-50 bg-purple-600 text-white px-3 py-1 rounded-full shadow-md text-sm"
+  >
+    ↓ New messages
+  </button>
+)}
+
 </div>
         <div className="flex flex-col px-4 py-3 border-t bg-white gap-2">
           {file && (

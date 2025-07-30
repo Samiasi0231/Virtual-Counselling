@@ -1,8 +1,10 @@
+// ChatContext.js
 
 import React, { createContext, useContext, useState } from 'react';
 import axiosClient from '../utils/axios-client-analytics';
-import {formatMessageDate} from "../utils/time"
+import { formatMessageDate } from '../utils/time';
 import { dedupeMessages } from '../utils/message';
+
 const ChatContext = createContext();
 export const useChatContext = () => useContext(ChatContext);
 
@@ -12,55 +14,102 @@ const ChatProvider = ({ children }) => {
   const [partnerInfo, setPartnerInfo] = useState(null);
   const [unreadIds, setUnreadIds] = useState([]);
   const [loadingChats, setLoadingChats] = useState(false);
+  const [recentChats, setRecentChats] = useState([]);
 
- const fetchChatMessages = async (chatId, token) => {
-  if (!chatId || !token) return [];
-
-  const localKey = `chat_messages_${chatId}`;
-  const cached = localStorage.getItem(localKey);
-  let localMessages = [];
-
-  if (cached) {
+ 
+  const fetchRecentChats = async () => {
+    setLoadingChats(true);
     try {
-      localMessages = JSON.parse(cached);
-      setChatMap(prev => ({
-        ...prev,
-        [chatId]: dedupeMessages([...(prev[chatId] || []), ...localMessages]),
-      }));
-    } catch (e) {
-      console.error('Invalid cache for', chatId);
+      const res = await axiosClient.get("/vpc/get-chat-rooms/");
+      const rooms = res.data || [];
+
+      setRecentChats(rooms);
+      localStorage.setItem("cached_chat_rooms", JSON.stringify(rooms));
+      return rooms;
+    } catch (err) {
+      console.error("[fetchRecentChats] Failed:", err);
+      try {
+        const fallback = JSON.parse(localStorage.getItem("cached_chat_rooms")) || [];
+        setRecentChats(fallback);
+        return fallback;
+      } catch {
+        return [];
+      }
+    } finally {
+      setLoadingChats(false);
     }
-  }
+  };
+
+const fetchChatMessages = async (chatId, token, force = false) => {
+  if (!chatId || !token) return [];
 
   try {
     const res = await axiosClient.get(`/vpc/get-messages/${chatId}/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    const raw = res.data.messages || res.data.fullMessages || res.data || [];
-    const serverMessages = raw.map(msg => ({
+    const serverMessages = (res.data.messages || res.data.fullMessages || res.data || []).map(msg => ({
       ...msg,
       groupDate: formatMessageDate(msg.created_at),
       seen_users: msg.seen_users || [],
     }));
 
-    const merged = dedupeMessages([...localMessages, ...serverMessages]);
+    const merged = dedupeMessages([
+      ...(chatMap[chatId] || []),
+      ...serverMessages,
+    ]);
+
+    // ✅ Save last 200 messages only
+    localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(merged.slice(-200)));
 
     setChatMap(prev => ({
       ...prev,
       [chatId]: merged,
     }));
 
-    localStorage.setItem(localKey, JSON.stringify(merged.slice(-200)));
-
     return merged;
   } catch (err) {
-    console.error('[ChatContext] fetchChatMessages failed:', err);
-    return [];
+    console.error('[fetchChatMessages] failed:', err);
+
+   
+    const localKey = `chat_messages_${chatId}`;
+    const cached = localStorage.getItem(localKey);
+    let localMessages = [];
+
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          localMessages = parsed;
+        }
+      } catch (e) {
+        console.warn('[fetchChatMessages] corrupted localStorage for', localKey);
+      }
+    }
+
+    return localMessages;
   }
 };
 
 
+
+  const selectChatSession = async ({ chatId, token, userType, isStudent, onSelect }) => {
+    const messages = await fetchChatMessages(chatId, token, true);
+    const lastMsg = messages[messages.length - 1];
+    const partner = isStudent ? lastMsg?.sender_counselor : lastMsg?.sender_user;
+
+    setChatSession({ item_id: chatId, user_anonymous: false });
+    setPartnerInfo(partner);
+    localStorage.setItem('lastChatId', chatId);
+
+    if (onSelect) {
+      onSelect(messages, partner, messages, { item_id: chatId, user_anonymous: false });
+    }
+
+    return messages;
+  };
+
+  // ✅ 4. Update seen state
   const updateSeenUsers = (chatId, messageIds, userId) => {
     if (!chatMap[chatId]) return;
 
@@ -75,10 +124,21 @@ const ChatProvider = ({ children }) => {
           : msg
       ),
     }));
+
     setUnreadIds(prev => prev.filter(id => !messageIds.includes(id)));
   };
 
-  const sendMessage = async ({ chatId, text, file, userType, token, contextUser, isStudent, anonymous,clientMessageId }) => {
+  const sendMessage = async ({
+    chatId,
+    text,
+    file,
+    userType,
+    token,
+    contextUser,
+    isStudent,
+    anonymous,
+    clientMessageId,
+  }) => {
     if (!chatId || !token || (!text && !file)) return;
 
     const now = new Date();
@@ -87,7 +147,7 @@ const ChatProvider = ({ children }) => {
 
     const optimisticMessage = {
       id: tempId,
-        clientMessageId,
+      clientMessageId,
       sender: userType,
       text,
       file: file ? URL.createObjectURL(file) : null,
@@ -101,20 +161,20 @@ const ChatProvider = ({ children }) => {
       senderAvatar: contextUser?.profilePhoto?.best || contextUser?.profilePhoto || null,
     };
 
-setChatMap(prev => {
-  const updated = dedupeMessages([...(prev[chatId] || []), optimisticMessage]).slice(-200);
-  localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(updated));
-  
-  return {
-    ...prev,
-    [chatId]: updated,
-  };
-});
+    setChatMap(prev => {
+      const updated = dedupeMessages([...(prev[chatId] || []), optimisticMessage]).slice(-200);
+      localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(updated));
+      return {
+        ...prev,
+        [chatId]: updated,
+      };
+    });
+
     try {
       const formData = new FormData();
       if (text) formData.append('text', text);
       if (file) formData.append('attachments', file);
-        if (clientMessageId) formData.append('clientMessageId', clientMessageId);
+      if (clientMessageId) formData.append('clientMessageId', clientMessageId);
 
       await axiosClient.post(`/vpc/create-message/${chatId}/`, formData, {
         headers: {
@@ -139,15 +199,17 @@ setChatMap(prev => {
         unreadIds,
         setUnreadIds,
         loadingChats,
+        fetchRecentChats,   
+        recentChats,          
         fetchChatMessages,
         updateSeenUsers,
         sendMessage,
+        selectChatSession    
       }}
     >
       {children}
     </ChatContext.Provider>
   );
 };
-
 
 export default ChatProvider;
