@@ -37,7 +37,7 @@ const SelfCareTips = () => {
   return (
  <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
  
-      <h3 className=" p-4 text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">💜
+      <h3 className=" p-4 text-wrap text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">💜
   Self-Care Tip of the Day</h3>
       <h3 className="text-sm sm:text-base text-purple-700 dark:text-gray-300 leading-relaxed">
         {tip}
