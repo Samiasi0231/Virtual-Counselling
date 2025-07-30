@@ -128,9 +128,15 @@ const {
                   `${partnerData?.firstname || ""} ${partnerData?.lastname || ""}`.trim();
 
                 const lastMessage = (chatMap[chat.item_id] || []).slice(-1)[0];
-                const preview = lastMessage?.text?.trim()
-                  ? lastMessage.text.slice(0, 30)
-                  : "[No message yet]";
+let preview = "[no current chat]";
+if (lastMessage?.text?.trim()) {
+  preview = lastMessage.text.slice(0, 30);
+} else if (lastMessage?.fileType === "image") {
+  preview = "📷 Image";
+} else if (lastMessage?.fileType === "file") {
+  preview = "📎 File";
+}
+
                 const createdAt = lastMessage?.created_at || lastMessage?.time;
                 const timePreview = createdAt ? getRelativeTime(new Date(createdAt)) : "";
                 const avatarUrl =
