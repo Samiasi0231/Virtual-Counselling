@@ -1,16 +1,14 @@
 import React, { useEffect } from 'react';
 import { Routes,Route,useLocation } from 'react-router-dom';
 import './css/style.css';
-import Login from "./components/login/Login"
 import ProtectedRoute from './protectedroute/ProtectedRoute';
 import UserRehydrator from './utils/UserRedrator';
-import StudentAccess from './Auth/StudentAccess';
-import CounsellorLayout from './layout/Layout';
+import UserAccess from './Auth/UserAccess';
+import Layout from './layout/Layout';
 import Dashboard from './pages/Dashboard';
 import CounsellorCards from './pages/counsellor/CounsellorProfileCard';
 import CounsellorProfile from "./pages/counsellor/CounselorProfile"
 import ChatPage from "./CounsellingChat/pages/ChatPage"
- import ActivityPage from './CounsellingChat/ActivityPage';
 import CounselorAvailability from './pages/counsellor/CounsellorAvailbibilty';
 import StudentBooking from './CounsellingChat/StudentBooking';
 import StudentjoinLive from "./CounsellingChat/UserGoLive"
@@ -18,7 +16,7 @@ import Counsellorjoinlive from "./pages/counsellor/CounselorJoinLive"
 import CounsellorList from "./pages/counsellor/CounsellorList"
 import CounsellorNote from "./pages/counsellor/CounsellorNote"
 import StudentNote from "./CounsellingChat/Studentnote"
-import  FeedBack from "./pages/users/FeedBack"
+import EditMyProfile from './pages/users/EditProfile';
 
 function App() {
 
@@ -34,20 +32,15 @@ function App() {
     <>
 <UserRehydrator/>
       <Routes>
-
-  <Route path='/login'element={<Login/>}/>
-       <Route path='/'element={<StudentAccess/>}/>
-       
-         <Route path="/" element={<StudentAccess/>} />
-
+       <Route path='/'element={<UserAccess/>}/>
         <Route path="/unauthorized" element={<p className="p-6 text-red-600">Unauthorized</p>} />
          
-          {/* counsellor Protected Route */}
+ {/* counsellor Protected Route */}
     <Route
     path="/counsellor"
     element={
       <ProtectedRoute allowedRoles={["counsellor"]}>
-        <CounsellorLayout />
+        <Layout />
       </ProtectedRoute>
     }
   >
@@ -58,9 +51,7 @@ function App() {
         <Route path="counsellor/list" element={<CounsellorList/>} />
          < Route  path='calendar' element={<CounselorAvailability/>}/>
          < Route  path='note' element={<CounsellorNote/>}/> 
-              {/* < Route  path='activity' element={<ActivityPage/>}/> */}
-                {/* <Route  path="profile" element={<CounselorProfile/>} /> */}
-                 < Route  path='feedback' element={<FeedBack/>}/>
+          < Route  path='edit/profile' element={<EditMyProfile/>}/> 
   </Route>
 
      
@@ -69,7 +60,7 @@ function App() {
     path="/student"
     element={
       <ProtectedRoute allowedRoles={["student"]}>
-        <CounsellorLayout />
+        <Layout />
       </ProtectedRoute>
     }
   >
@@ -79,10 +70,8 @@ function App() {
          <Route  path="Counsellor/profile/:id" element={<CounsellorProfile />} /> 
      < Route path='joinlive' element={<StudentjoinLive/>}/> 
       < Route  path='chat' element={<ChatPage/>}/>
-         < Route  path='calendar' element={<StudentBooking/>}/>
+         < Route  path='calendar/:mentor_id' element={<StudentBooking/>}/>
             < Route  path='note' element={<StudentNote/>}/>
-              {/* < Route  path='activity' element={<ActivityPage/>}/> */}
-                 < Route  path='feedback' element={<FeedBack/>}/>
   </Route>
       </Routes>
     </>

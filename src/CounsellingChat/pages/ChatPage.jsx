@@ -6,7 +6,6 @@ import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
 import {formatMessageDate} from "../../utils/time"
 import Avatar from 'react-avatar';
-
 const getAnonymousMap = () => {
   try {
     const stored = localStorage.getItem('anonymous_map');
@@ -28,8 +27,11 @@ const getAnonymousForChat = (chatId) => {
 };
 
 const ChatPage = ({ initialRole = 'student' }) => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const scrollContainerRef = useRef(null);
+const [page, setPage] = useState(1); // for pagination
+const [hasMoreMessages, setHasMoreMessages] = useState(true);
+
+   const navigate = useNavigate();
   const websocketRef = useRef(null);
   const location = useLocation();
   const chatIdFromURL = new URLSearchParams(location.search).get('chatId');
@@ -55,6 +57,104 @@ const chatIdToUse = chatIdFromURL || storedChatId;
   const messagesEndRef = useRef(null);
 
   const normalizeProfilePhoto = (photo) => typeof photo === 'object' ? photo?.best : photo;
+
+
+
+const extractFileData = (data) => {
+  if (Array.isArray(data.attachments) && data.attachments.length > 0) {
+    return {
+      file: data.attachments[0].location,
+      fileType: data.attachments[0].attachments_type,
+    };
+  }
+  if (Array.isArray(data.media) && data.media.length > 0) {
+    return {
+      file: data.media[0].location,
+      fileType: data.media[0].media_type,
+    };
+  }
+  return { file: null, fileType: null };
+};
+
+const loadOlderMessages = async () => {
+  if (!chatSession?.item_id || !token) return;
+
+  const container = scrollContainerRef.current;
+  const prevScrollHeight = container?.scrollHeight;
+
+  setLoadingMessages(true);
+
+  try {
+    const res = await axiosClient.get(
+      `/vpc/get-messages/${chatSession.item_id}/?page=${page + 1}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    const olderMessages = Array.isArray(res.data.messages) ? res.data.messages : [];
+
+    if (olderMessages.length === 0) {
+      setHasMoreMessages(false);
+      return;
+    }
+
+    const formatted = olderMessages.map((msg) => {
+      const isFromCurrentUser = msg.from_counselor
+        ? userType === 'counsellor'
+        : userType === 'student';
+
+      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+      const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+      return {
+        ...msg,
+        isFromCurrentUser,
+        file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+        fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+        text: msg.text || '',
+        time: new Date(msg.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        groupDate: formatMessageDate(msg.created_at),
+        studentAnonymous: msg.anonymous ?? false,
+        senderLastName: lastname,
+      };
+    });
+
+    setMessages(prev => [...formatted, ...prev]);
+    setPage(prev => prev + 1);
+
+    setTimeout(() => {
+      const newScrollHeight = container?.scrollHeight;
+      container.scrollTop = newScrollHeight - prevScrollHeight;
+    }, 100);
+  } catch (err) {
+    console.error('Failed to load older messages:', err);
+  } finally {
+    setLoadingMessages(false);
+  }
+};
+
+
+
+useEffect(() => {
+  const container = scrollContainerRef.current;
+  if (!container || !chatSession?.item_id) return;
+
+  const handleScroll = () => {
+    if (container.scrollTop === 0 && hasMoreMessages && !loadingMessages) {
+      loadOlderMessages();
+    }
+  };
+
+  container.addEventListener('scroll', handleScroll);
+  return () => container.removeEventListener('scroll', handleScroll);
+}, [chatSession?.item_id, hasMoreMessages, loadingMessages]);
+
+
+
 
   const isStudentAnonymous = chatSession?.user_anonymous;
 
@@ -113,7 +213,6 @@ useEffect(() => {
     setLoadingMessages(true);
 
     try {
-      // ✅ 1. Load from cache and keep them until real data arrives
       const cached = localStorage.getItem(`chat_messages_${chatIdToUse}`);
       if (cached) {
         const parsedCached = JSON.parse(cached);
@@ -121,8 +220,6 @@ useEffect(() => {
           setMessages(parsedCached); 
         }
       }
-
-      // ✅ 2. Fetch fresh messages
       const res = await axiosClient.get(`/vpc/get-messages/${chatIdToUse}/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -145,8 +242,9 @@ useEffect(() => {
             return {
               ...msg,
               isFromCurrentUser,
-              file: msg.media?.[0]?.url || null,
-              fileType: msg.media?.[0]?.type || null,
+file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+
               text: msg.text || '',
               time: new Date(msg.created_at).toLocaleTimeString([], {
                 hour: '2-digit',
@@ -177,21 +275,10 @@ useEffect(() => {
         : null;
 
       setUnreadIds(unread);
-      // setPartnerInfo(partnerData);
+    
       if (!chatSession) {
-  setPartnerInfo(partnerData); // fallback only if chatSession is missing
+  setPartnerInfo(partnerData); 
 }
-
-useEffect(() => {
-  if (!chatSession) return;
-
-  const data = isStudent ? chatSession.counselor_data : chatSession.user_data;
-  if (data) {
-    setPartnerInfo(data);
-  }
-}, [chatSession, isStudent]);
-
-
       setChatSession({
         item_id: chatIdToUse,
         user_anonymous: false,
@@ -206,7 +293,7 @@ useEffect(() => {
 
       setMobileView(false);
     } catch (err) {
-      console.error('❌ Failed to auto-load chat:', err);
+      console.error('Failed to auto-load chat:', err);
     } finally {
       setLoadingMessages(false);
     }
@@ -214,6 +301,15 @@ useEffect(() => {
 
   fetchChatFromQueryParam();
 }, [chatIdToUse, isStudent, userType, token]);
+
+useEffect(() => {
+  if (!chatSession) return;
+
+  const data = isStudent ? chatSession.counselor_data : chatSession.user_data;
+  if (data) {
+    setPartnerInfo(data);
+  }
+}, [chatSession, isStudent]);
 
 
 useEffect(() => {
@@ -225,11 +321,6 @@ useEffect(() => {
     );
   }
 }, [messages, chatSession]);
-
-
-
-
-
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -284,29 +375,53 @@ const toggleAnonymous = async () => {
       const sender = data.sender || (data.from_counselor ? 'counsellor' : 'student');
       const isFromCurrentUser = sender === userType;
 
-      const newMsg = {
-        id: data.item_id || now.getTime(),
-        sender,
-        text: data.text,
-        file: data.media?.[0]?.url || null,
-        fileType: data.media?.[0]?.type || null,
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        groupDate: formatMessageDate(now),
-        read: false,
-        studentAnonymous: data.anonymous ?? false,
-        isFromCurrentUser,
-        senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
-        senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
-      };
+const { file, fileType } = extractFileData(data);
 
-      setMessages((prev) => {
-        const filtered = prev.filter(
-          (msg) =>
-            msg.id !== newMsg.id &&
-            !(msg.id?.startsWith('temp') && msg.text === data.text)
-        );
-        return [...filtered, newMsg];
-      });
+const newMsg = {
+  id: data.item_id || now.getTime(),
+  sender,
+  text: data.text,
+  file,        
+  fileType,     
+  time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+  groupDate: formatMessageDate(now),
+  read: false,
+  studentAnonymous: data.anonymous ?? false,
+  isFromCurrentUser,
+  senderFullname: data.sender_counselor?.fullname || data.sender_user?.fullname,
+  senderAvatar: data.sender_counselor?.profilePhoto?.best || data.sender_user?.profilePhoto,
+};
+if (data?.type === 'seen_update' && data.userId && Array.isArray(data.messageIds)) {
+  setMessages(prev =>
+    prev.map(msg =>
+      data.messageIds.includes(msg.item_id)
+        ? { ...msg, seen_users: [...(msg.seen_users || []), data.userId] }
+        : msg
+    )
+  )}
+
+      // setMessages((prev) => {
+      //   const filtered = prev.filter(
+      //     (msg) =>
+      //       msg.id !== newMsg.id &&
+      //       !(msg.id?.startsWith('temp') && msg.text === data.text)
+      //   );
+      //   return [...filtered, newMsg];
+      // });
+setMessages((prev) => {
+  const safePrev = Array.isArray(prev) ? prev : [];
+  const filtered = safePrev.filter((msg) => {
+    const isTemp = msg.id?.startsWith('temp');
+    const matchesText = msg.text === data.text;
+    const matchesFile = file &&
+      msg.file?.startsWith('blob:') &&
+      msg.fileType === (data.attachments?.[0]?.attachments_type || data.fileType);
+
+    return !(isTemp && (matchesText || matchesFile));
+  });
+
+  return [...filtered, newMsg];
+});
     }
 
 
@@ -337,7 +452,7 @@ const toggleAnonymous = async () => {
     sender: userType,
     text: newMessage,
     file: file ? URL.createObjectURL(file) : null,
-    fileType: file?.type || null,
+    fileType: file?.type?.startsWith('image') ? 'image' : 'file',
     time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     groupDate: formatMessageDate(now), 
     read: false,
@@ -347,8 +462,6 @@ const toggleAnonymous = async () => {
     senderAvatar: normalizeProfilePhoto(contextUser?.profilePhoto),
   },
 ]);
-
-
     setNewMessage('');
     setFile(null);
     setTyping(false);
@@ -356,7 +469,7 @@ const toggleAnonymous = async () => {
     try {
       const formData = new FormData();
       if (newMessage.trim()) formData.append('text', newMessage.trim());
-   if (file) formData.append('media', file);
+   if (file) formData.append('attachments', file);
       await axiosClient.post(
         `/vpc/create-message/${chatSession.item_id}/`,
         formData,
@@ -380,15 +493,59 @@ const getSenderName = (msg) => {
   }
   return msg.senderFullname || msg.senderLastName || 'Counselor';
 }
-const groupedMessages = messages.reduce((groups, msg) => {
+const groupedMessages = (messages || []).reduce((groups, msg) => {
 const label = msg.groupDate || formatMessageDate(msg.created_at);
  if (!groups[label]) groups[label] = [];
   groups[label].push(msg);
   return groups;
 }, {});
 
+useEffect(() => {
+  if (!messages || !Array.isArray(messages) || !websocketRef.current || websocketRef.current.readyState !== WebSocket.OPEN) return;
+
+  const currentUserId = contextUser?.item_id;
+  if (!currentUserId || !chatSession?.item_id) return;
+
+  const unseenMessages = messages.filter(
+    (msg) => !msg.isFromCurrentUser && !msg.seen_users?.includes(currentUserId)
+  );
+
+  if (unseenMessages.length === 0) return;
+
+  const unseenIds = unseenMessages.map((msg) => msg.item_id);
+
+  websocketRef.current.send(JSON.stringify({
+    type: 'mark_seen',
+    chatId: chatSession.item_id,
+    userId: currentUserId,
+    messageIds: unseenIds,
+  }));
+
+  
+  setMessages(prev =>
+    prev.map(msg =>
+      unseenIds.includes(msg.item_id)
+        ? { ...msg, seen_users: [...(msg.seen_users || []), currentUserId] }
+        : msg
+    )
+  );
+}, [messages, contextUser, chatSession]);
+
+
+
+
 return (
+  <div className='h-screen bg-gray-100'>
+     <div className="mb-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+  >
+    ← Back
+  </button>
+</div>
   <div className="h-screen flex flex-col md:flex-row bg-gray-100">
+
   <div className="md:hidden flex items-center justify-between p-4 bg-white border-b">
    <button
   onClick={() => setMobileView(prev => !prev)}
@@ -457,84 +614,85 @@ return (
             </div>
           )}
         </div>
-<div className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
+<div  ref={scrollContainerRef}
+className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
   {loadingMessages && (
     <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
       <span className="text-sm text-gray-500">Loading messages...</span>
     </div>
   )}
 
-  {Object.entries(groupedMessages).map(([date, msgs]) => (
-    <div key={date}>
-      <div className="text-center text-xs text-gray-500 my-3">{date}</div>
-      {msgs.map(msg => (
+ {Object.entries(groupedMessages).map(([date, msgs]) => (
+  <div key={`group-${date}-${msgs[0]?.id || date}`}>
+    <div className="text-center text-xs text-gray-500 my-3">{date}</div>
+
+    {msgs.map((msg,index)=> (
+      <div
+     key={msg.id || `msg-${index}`}
+        className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
+      >
+        {!msg.isFromCurrentUser && (
+          <div className="shrink-0">
+            {msg.senderAvatar && !msg.studentAnonymous ? (
+              <img
+                src={msg.senderAvatar}
+                alt={getSenderName(msg)}
+                className="w-6 h-6 rounded-full object-cover"
+                title={getSenderName(msg)}
+              />
+            ) : (
+              <Avatar
+                name={getSenderName(msg)}
+                size="24"
+                round
+                title={getSenderName(msg)}
+              />
+            )}
+          </div>
+        )}
+
         <div
-          key={msg.id}
-          className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
+          className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
+            msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
+          } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
         >
-          {/* Avatar for received messages only */}
-          {!msg.isFromCurrentUser && (
-            <div className="shrink-0">
-              {msg.senderAvatar && !msg.studentAnonymous ? (
+          <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
+            <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
+          </div>
+
+          {msg.file && (
+            <>
+              {msg.fileType === 'image' ? (
                 <img
-                  src={msg.senderAvatar}
-                  alt={getSenderName(msg)}
-                  className="w-6 h-6 rounded-full object-cover"
-                  title={getSenderName(msg)}
+                  src={msg.file}
+                  alt="Uploaded"
+                  className="mt-2 rounded max-w-xs max-h-40 object-cover"
                 />
               ) : (
-                <Avatar
-                  name={getSenderName(msg)}
-                  size="24"
-                  round
-                  title={getSenderName(msg)}
-                />
+                <p className="text-xs text-blue-600 mt-1 break-all">
+                  📎{' '}
+                  <a href={msg.file} target="_blank" rel="noopener noreferrer">
+                    {msg.file}
+                  </a>
+                </p>
               )}
-            </div>
+            </>
           )}
 
-         <div
-  className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
-    msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
-  } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
->
-           <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
-  <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
-</div>
-            {/* Media preview */}
-            {msg.file && (
-              <>
-                {msg.fileType === 'image' ? (
-                  <img
-                    src={msg.file}
-                    alt="Uploaded"
-                    className="mt-2 rounded max-w-xs max-h-40 object-cover"
-                  />
-                ) : (
-                  <p className="text-xs text-blue-600 mt-1 break-all">
-                    📎{' '}
-                    <a href={msg.file} target="_blank" rel="noopener noreferrer">
-                      {msg.file}
-                    </a>
-                  </p>
-                )}
-              </>
-            )}
-
-            {/* Read Status + Time */}
-            <span
-              className={`text-[10px] block mt-1 text-right ${
-                msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
-              }`}
-            >
-              {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
-              {msg.time}
-            </span>
-          </div>
+          <span
+            className={`text-[10px] block mt-1 text-right ${
+              msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
+            }`}
+          >
+            {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
+            {msg.time}
+          </span>
         </div>
-      ))}
-    </div>
-  ))}
+      </div>
+    ))}
+  </div>
+))}
+
 
   {typing && typing.sender && typing.sender !== userType && (
     <div className="text-sm italic text-gray-500">
@@ -606,7 +764,7 @@ return (
     )}
   </div>
 </div>
-
+</div>
   );
 };
 

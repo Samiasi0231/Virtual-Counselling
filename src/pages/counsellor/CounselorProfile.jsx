@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams,Link,} from 'react-router-dom';
 import axiosClient from '../../utils/axios-client-analytics';
 
 const CounselorProfile = () => {
-  const { id } = useParams(); // counselor_id from URL
+  const { id } = useParams(); 
   const navigate = useNavigate();
   const [counselor, setCounselor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,14 @@ const CounselorProfile = () => {
 
   return (
     <div className="overflow-auto mx-auto shadow-lg rounded-lg font-sans px-4 sm:px-6 lg:px-8 py-8 w-full bg-white">
+ <div className="mb-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+  >
+    ← Back
+  </button>
+</div>
       {/* Avatar + Basic Info */}
       <div className="flex items-center space-x-6">
         <img
@@ -101,24 +109,6 @@ const CounselorProfile = () => {
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className="mt-6">
-        <h3 className="text-lg font-medium text-gray-700">Statistics</h3>
-        <div className="grid grid-cols-3 gap-4 mt-2">
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-700">Clients</h4>
-            <p className="text-gray-600 text-base">34 Active</p>
-          </div>
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-700">Sessions</h4>
-            <p className="text-gray-600 text-base">87 this month</p>
-          </div>
-          <div className="bg-gray-50 p-3 rounded text-center shadow-sm">
-            <h4 className="text-sm font-semibold text-gray-700">Rating</h4>
-            <p className="text-yellow-500 text-base">4.9 ★</p>
-          </div>
-        </div>
-      </div>
 
       {/* Availability */}
       <div className="mt-4">
@@ -139,12 +129,24 @@ const CounselorProfile = () => {
         >
           {startingChat ? 'Starting...' : 'Message'}
         </button>
-        <button
-          className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
-          onClick={() => navigate('/student/calendar')}
-        >
-          Schedule
-        </button>
+      <button
+  className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
+ onClick={() =>
+  navigate(`/student/calendar/${id}`, {
+    state: {
+      fullname: counselor.fullname,
+      profilePhoto:
+        counselor.profilePhoto?.best ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+          counselor.fullname
+        )}&background=4F46E5&color=fff&size=128`
+    }
+  })
+}
+
+>
+  Schedule
+</button>
       </div>
     </div>
   );

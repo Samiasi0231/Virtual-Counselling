@@ -10,7 +10,8 @@ const ProtectedRoute = ({ allowedRoles, children  }) => {
   const userType = student ? "student" : counsellor ? "counsellor" : null;
 
   if (!token || !user) {
-    return <Navigate to="/https://www.acadaboo.com/user-login" replace />;
+  window.location.href = `${import.meta.env.VITE_ANALYTIC_BASE_URL}/login`;
+  return null;
   }
 
 if (!allowedRoles.includes(user?.user_type)) {

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link,useNavigate } from 'react-router-dom';
 import Avatar from 'react-avatar';
 import { useStateValue } from "../../Context/UseStateValue";
 import axiosClient from "../../utils/axios-client-analytics";
 
 function CounselorList() {
+  const navigate=useNavigate()
   const [{ student, counsellor }] = useStateValue();
   const user = student || counsellor;
   const userType = user?.user_type;
@@ -38,6 +39,14 @@ useEffect(() => {
 
   return (
     <div className="overflow-x-auto bg-white shadow rounded-lg p-4">
+           <div className="mb-6">
+  <button
+    onClick={() => navigate(-1)}
+    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+  >
+    ← Back
+  </button>
+</div>
       <h2 className="text-xl font-bold mb-4 text-gray-800">Counselor List</h2>
       <table className="min-w-full table-auto text-left text-sm">
         <thead className="border-b bg-gray-100">

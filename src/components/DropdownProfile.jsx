@@ -95,24 +95,25 @@ function DropdownProfile({ align }) {
             <li>
               <Link
                 className="font-medium text-sm text-violet-500 hover:text-violet-600 dark:hover:text-violet-400 flex items-center py-1 px-3"
-                to="/settings"
+                to="edit/profile"
                 onClick={() => setDropdownOpen(false)}
               >
                 Settings
               </Link>
             </li>
             <li>
-         <Link
+  <button
   className="font-medium text-sm text-violet-500 hover:text-violet-600 dark:hover:text-violet-400 flex items-center py-1 px-3"
-  to="/signin"
   onClick={() => {
     localStorage.clear();
     sessionStorage.clear();
     setDropdownOpen(false);
+    window.location.href = `${import.meta.env.VITE_ANALYTIC_BASE_URL}/login`;
   }}
 >
   Sign Out
-</Link>
+</button>
+
 
             </li>
           </ul>
