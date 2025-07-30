@@ -39,6 +39,7 @@ const {
   chatMap,
   setChatMap,
   sendMessage,
+  fetchChatMessages,
   updateSeenUsers,
 } = useChatContext();
 
@@ -359,6 +360,38 @@ useEffect(() => {
     }
   }, [messages]);
 
+  // ⬇️⬇️⬇️ PLACE THIS INSIDE ChatPage.jsx, anywhere with other useEffects
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (
+      document.visibilityState === 'visible' &&        // ✅ tab became active
+      chatSession?.item_id &&                          // ✅ chat ID exists
+      token                                             // ✅ token exists
+    ) {
+      fetchChatMessages(chatSession.item_id, token);   // ✅ call your context function
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [chatSession?.item_id, token, fetchChatMessages]);
+useEffect(() => {
+  const interval = setInterval(() => {
+    if (
+      document.visibilityState === 'visible' &&
+      chatSession?.item_id &&
+      token
+    ) {
+      fetchChatMessages(chatSession.item_id, token);   // ✅ fetch from backend every 15s
+    }
+  }, 15000); // ⏱️ every 15 seconds
+
+  return () => clearInterval(interval);
+}, [chatSession?.item_id, token, fetchChatMessages]);
+
+
 
 
 const toggleAnonymous = async () => {
@@ -563,9 +596,6 @@ useEffect(() => {
   ),
 }));
 }, [messages, contextUser, chatSession]);
-
-
-
 
 return (
   <div className='h-screen bg-gray-100'>
