@@ -66,10 +66,12 @@ const UpcomingEventsCard = () => {
 
   return (
     <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
-      <h3 className="p-4 text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">
+      <div className="px-5 pt-5">
+       <header className="flex justify-between items-start mb-2">
+        <h2 className="text-base font-serif sm:text-lg font-light text-gray-500 dark:text-gray-100 mb-2">
         🟣 Upcoming Events
-      </h3>
-
+      </h2>
+</header>
       {upcomingMeetings.length === 0 ? (
         <p className="text-gray-500 px-3">No upcoming meetings yet.</p>
       ) : (
@@ -95,6 +97,7 @@ const UpcomingEventsCard = () => {
           ))}
         </ul>
       )}
+      </div>
     </div>
   );
 };

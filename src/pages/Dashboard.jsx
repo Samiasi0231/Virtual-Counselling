@@ -4,7 +4,7 @@ import { useStateValue } from "../Context/UseStateValue";
 import Datepicker from '../components/Datepicker';
 import DashboardCard01 from '../partials/dashboard/DashboardCard01';
 import DashboardCard02 from '../partials/dashboard/DashboardCard02';
-  // import DashboardCard04 from '../partials/dashboard/DashboardCard04';
+//  import DashboardCard04 from '../partials/dashboard/DashboardCard04';
 import DashboardCard10 from '../partials/dashboard/CounsellorList';
 import DashboardCard05 from '../partials/dashboard/DashboardCared05';
 import StudentWelocome from '../partials/dashboard/StudentWelcom';
@@ -45,14 +45,14 @@ function Dashboard() {
 
             </div>
 
-            <div className="grid grid-cols-12 gap-6">
+  <div className="grid grid-cols-12 gap-6">
  {/* counsellor cards */}
  {userType ==="counsellor"&&(
   <>
     <DashboardCard01 />
    <DashboardCard02 /> 
     <DashboardCard05 />
-    {/* <DashboardCard04 />  */}
+     {/* <DashboardCard04 />   */}
      <CounsellorShedule/>
                    </>
  )}

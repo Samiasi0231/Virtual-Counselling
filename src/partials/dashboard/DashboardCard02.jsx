@@ -38,18 +38,20 @@ function DashboardCard02() {
   }, [today]);
 
   return (
-    <div className="flex flex-wrap gap-6 col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl p-4">
-      
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+   <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
+        <div className="px-5 pt-5">
+         <header className="flex justify-between items-start mb-2">
+        <h2 className="text-base font-serif sm:text-lg font-light text-gray-500 dark:text-gray-100 mb-2">
         Counsellor Tip of the Day
       </h2>
-      <div className="rounded text-purple-800  text-sm font-medium">
+      </header>
+      <p className="font-sans text-sm sm:text-base text-purple-400 dark:text-gray-300 leading-relaxed">
         {tip}
-      </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+      </p>
+   <p className="font-sans text-sm sm:text-base text-gray-400 dark:text-gray-300 leading-relaxed">
         A moment to reflect and grow in your practice.
       </p>
-
+</div>
     </div>
   );
 }

@@ -100,14 +100,15 @@ const [loading, setLoading] = useState(true);
           </div>
         </div>
 
-        <div className="pt-4 mt-auto">
-          <Link
-            to={userType ? `/${userType}/counsellor/profile/${counselor.item_id}` : "/unauthorized"}
-            className="block text-center w-full bg-purple-500 hover:bg-purple-700 text-white text-sm font-semibold py-2 rounded-lg"
-          >
-            View profile →
-          </Link>
-        </div>
+      <div className="pt-4 mt-auto">
+  <Link
+    to={userType ? `/${userType}/counsellor/profile/${counselor.item_id}` : "/unauthorized"}
+    className="inline-block bg-purple-500 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-4 rounded-lg"
+  >
+    View profile →
+  </Link>
+</div>
+
       </div>
     ))}
   </div>

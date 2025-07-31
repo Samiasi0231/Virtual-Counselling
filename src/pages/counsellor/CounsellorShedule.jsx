@@ -127,8 +127,10 @@ const CounselorSchedule = () => {
 
   return (
     <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold text-gray-800 mb-2">Counsellor Schedule</h2>
+      <div className="px-5 pt-5">
+       <header className="flex justify-between items-start mb-2">
+        <h2 className="text-base font-serif sm:text-lg font-light text-gray-500 dark:text-gray-100 mb-2">Counsellor Schedule</h2>
+        </header>
         {bookings.length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions booked yet.</p>
         ) : (
