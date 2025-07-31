@@ -3,6 +3,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../utils/axios-client-analytics';
+import { toast } from 'react-toastify';
 import { useStateValue } from '../../Context/UseStateValue';
 
 const CounselorAvailability = () => {
@@ -159,11 +160,9 @@ const handleSave = async () => {
     // setSelectedDate(prevSelected);     
   } catch (error) {
     console.error('Failed to save availability:', error);
-    toast.error('❌ Failed to save availability.');
+    toast.error(' Failed to save availability.');
   }
 };
-
-
 
   const selectedDateKey = getFormattedDate(selectedDate);
   const slots = availability[selectedDateKey] || [];

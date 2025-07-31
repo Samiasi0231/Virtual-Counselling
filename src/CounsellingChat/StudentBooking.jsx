@@ -226,7 +226,7 @@ const modifiersClassNames = {
   setSelectedTime(slot);
   toast.info(`🕒 Selected time: ${slot}`);
 }}
-                      className={`w-full py-2 px-3 rounded border text-center ${
+                      className={` py-2 px-3 rounded border text-center ${
                         selectedTime === slot
                           ? 'bg-purple-600 text-white'
                           : 'bg-gray-100 hover:bg-gray-200'

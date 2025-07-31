@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams,Link,} from 'react-router-dom';
+import { useNavigate, useParams,} from 'react-router-dom';
 import axiosClient from '../../utils/axios-client-analytics';
 
 const CounselorProfile = () => {
@@ -119,35 +119,36 @@ const CounselorProfile = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-between mt-6 gap-3">
-        <button
-          className={`flex-1 bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-blue-700 ${
-            startingChat ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-          onClick={handleStartChat}
-          disabled={startingChat}
-        >
-          {startingChat ? 'Starting...' : 'Message'}
-        </button>
-      <button
-  className="flex-1 bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
- onClick={() =>
-  navigate(`/student/calendar/${id}`, {
-    state: {
-      fullname: counselor.fullname,
-      profilePhoto:
-        counselor.profilePhoto?.best ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          counselor.fullname
-        )}&background=4F46E5&color=fff&size=128`
-    }
-  })
-}
+    <div className="flex justify-start items-center mt-6 space-x-3">
+  <button
+    className={`inline-flex items-center bg-blue-500 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-blue-700 ${
+      startingChat ? 'opacity-50 cursor-not-allowed' : ''
+    }`}
+    onClick={handleStartChat}
+    disabled={startingChat}
+  >
+    {startingChat ? 'Starting...' : 'Message'}
+  </button>
 
->
-  Schedule
-</button>
-      </div>
+  <button
+    className="inline-flex items-center bg-green-600 text-white text-sm font-semibold py-2 px-4 rounded hover:bg-green-700"
+    onClick={() =>
+      navigate(`/student/calendar/${id}`, {
+        state: {
+          fullname: counselor.fullname,
+          profilePhoto:
+            counselor.profilePhoto?.best ||
+            `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              counselor.fullname
+            )}&background=4F46E5&color=fff&size=128`,
+        },
+      })
+    }
+  >
+    Schedule
+  </button>
+</div>
+
     </div>
   );
 };
