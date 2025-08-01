@@ -254,22 +254,101 @@ useEffect(() => {
     return <p className="text-center text-red-500">Unauthorized user</p>;
   }
 
-   const handleChatSelect = useCallback((fullMessages, partnerData, messages, sessionData) => {
-    setPartnerInfo(partnerData);
-    const msgList = fullMessages || messages || [];
-    setMessages(msgList);
-    localStorage.setItem('lastChatId', sessionData.item_id);
-    setChatSession(sessionData);
-    const unread = msgList.filter(msg => !msg.read && msg.sender !== userType).map(msg => msg.id);
+  const handleChatSelect = useCallback(async (chatRoom) => {
+  if (!chatRoom?.item_id || !token) return;
+
+  const chatId = chatRoom.item_id;
+  setLoadingMessages(true);
+
+  try {
+    let page = 1;
+    let allMessages = [];
+    let hasMore = true;
+
+    const cached = JSON.parse(localStorage.getItem(`chat_messages_${chatId}`) || '[]');
+
+    while (hasMore) {
+      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=${page}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const currentPageMsgs = Array.isArray(res.data)
+        ? res.data
+        : res.data.fullMessages || res.data.messages || [];
+
+      if (!currentPageMsgs.length) break;
+
+      const alreadySeen = currentPageMsgs.some(msg =>
+        cached.some(c => c.item_id === msg.item_id)
+      );
+
+      allMessages = [...currentPageMsgs, ...allMessages];
+      if (alreadySeen) break;
+
+      page++;
+      hasMore = currentPageMsgs.length > 0;
+    }
+
+    const formatted = allMessages.map((msg) => {
+      const isFromCurrentUser = msg.from_counselor
+        ? userType === 'counsellor'
+        : userType === 'student';
+
+      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+      const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+      return {
+        ...msg,
+        isFromCurrentUser,
+        file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+        fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+        text: msg.text || '',
+        time: new Date(msg.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        groupDate: formatMessageDate(msg.created_at),
+        studentAnonymous: msg.anonymous ?? false,
+        senderLastName: lastname,
+      };
+    });
+
+    const merged = mergeAndDeduplicate(cached, formatted);
+    const trimmed = merged.slice(-100); // keep only latest 100
+    localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(trimmed));
+    setMessages(trimmed);
+    setPage(page);
+    setHasMoreMessages(true);
+
+    const unread = trimmed
+      .filter((msg) => !msg.read && msg.sender !== userType)
+      .map((msg) => msg.item_id);
     setUnreadIds(unread);
-    setUnreadCounts(prev => ({ ...prev, [sessionData.item_id]: unread.length }));
-    if (isStudent && sessionData?.item_id) {
-      const savedAnonymous = getAnonymousForChat(sessionData.item_id);
+    setUnreadCounts((prev) => ({ ...prev, [chatId]: unread.length }));
+
+    const partnerData = isStudent ? chatRoom.counselor_data : chatRoom.user_data;
+    setPartnerInfo(partnerData);
+
+    setChatSession({
+      item_id: chatId,
+      user_anonymous: chatRoom.user_anonymous ?? false,
+    });
+
+    localStorage.setItem('lastChatId', chatId);
+
+    if (isStudent) {
+      const savedAnonymous = getAnonymousForChat(chatId);
       setAnonymous(savedAnonymous);
     }
+
     setMobileView(false);
-    
-  }, [isStudent, userType]);
+  } catch (err) {
+    console.error('Failed to fetch messages for selected chat:', err);
+  } finally {
+    setLoadingMessages(false);
+  }
+}, [isStudent, token, userType]);
+
 
   const partner = useMemo(() => userType === 'student'
     ? chatSession?.counselor_data?.fullname || 'Counselor'
@@ -283,117 +362,6 @@ useEffect(() => {
     }
   }, [typing, userType, chatSession]);
 
-useEffect(() => {
-  const fetchChatMessages = async () => {
-    if (!chatIdToUse || !token) return;
-    setLoadingMessages(true);
-
-    try {
-      let page = 1;
-      let allMessages = [];
-      let hasMore = true;
-
-      const cached = JSON.parse(localStorage.getItem(`chat_messages_${chatIdToUse}`) || '[]');
-
-      while (hasMore) {
-        const res = await axiosClient.get(
-          `/vpc/get-messages/${chatIdToUse}/?page=${page}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        const currentPageMsgs = Array.isArray(res.data)
-          ? res.data
-          : res.data.fullMessages || res.data.messages || [];
-
-        if (!currentPageMsgs.length) break;
-
-        const alreadySeen = currentPageMsgs.some(msg =>
-          cached.some(c => c.item_id === msg.item_id)
-        );
-
-        allMessages = [...currentPageMsgs, ...allMessages];
-        if (alreadySeen) break;
-
-        page++;
-        hasMore = currentPageMsgs.length > 0;
-      }
-
-      
-      const formattedAPI = allMessages.map((msg) => {
-        const isFromCurrentUser = msg.from_counselor
-          ? userType === 'counsellor'
-          : userType === 'student';
-
-        const sender = msg.from_counselor
-          ? msg.sender_counselor
-          : msg.sender_user;
-
-        const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
-
-        return {
-          ...msg,
-          isFromCurrentUser,
-          file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
-          fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
-          text: msg.text || '',
-          time: new Date(msg.created_at).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
-          groupDate: formatMessageDate(msg.created_at),
-          studentAnonymous: msg.anonymous ?? false,
-          senderLastName: lastname,
-        };
-      });
-
-      
-      const mergedMessages = mergeAndDeduplicate(cached, formattedAPI);
-      setMessages(mergedMessages);
-      localStorage.setItem(`chat_messages_${chatIdToUse}`, JSON.stringify(mergedMessages.slice(-100)));
-
-      setPage(page);
-      setHasMoreMessages(true);
-
-      const unread = mergedMessages
-        .filter((msg) => !msg.read && msg.sender !== userType)
-        .map((msg) => msg.item_id);
-
-      const partnerData = mergedMessages.length
-        ? isStudent
-          ? mergedMessages[0]?.sender_counselor
-          : mergedMessages[0]?.sender_user
-        : null;
-
-      setUnreadIds(unread);
-
-      if (!chatSession) {
-        setPartnerInfo(partnerData);
-      }
-
-      setChatSession({
-        item_id: chatIdToUse,
-        user_anonymous: false,
-      });
-
-      localStorage.setItem('lastChatId', chatIdToUse);
-
-      if (isStudent) {
-        const savedAnonymous = getAnonymousForChat(chatIdToUse);
-        setAnonymous(savedAnonymous);
-      }
-
-      setMobileView(false);
-    } catch (err) {
-      console.error('Failed to fetch chat messages:', err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
-  fetchChatMessages();
-}, [chatIdToUse, isStudent, userType, token]);
 
 
 useLayoutEffect(() => {
@@ -645,9 +613,14 @@ useEffect(() => {
   const currentUserId = contextUser?.item_id;
   if (!currentUserId || !chatSession?.item_id) return;
 
-  const unseenMessages = messages.filter(
-    (msg) => !msg.isFromCurrentUser && !msg.seen_users?.includes(currentUserId)
-  );
+ const hasSeen = (msg) =>
+  Array.isArray(msg.seen_users) &&
+  msg.seen_users.map(String).includes(String(currentUserId));
+
+const unseenMessages = messages.filter(
+  (msg) => !msg.isFromCurrentUser && !hasSeen(msg)
+);
+
 
   if (unseenMessages.length === 0) return;
 
@@ -900,12 +873,13 @@ className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
   onChange={(e) => {
     const value = e.target.value;
     setNewMessage(value);
-    setTyping(true);
+   if (!typing) setTyping(true);  
+clearTimeout(typingTimer);
+typingTimer = setTimeout(() => {
+  sendTypingStatus(websocketRef, chatSession, userType, isStudent, anonymous);
+  setTyping(false); 
+}, 1200);
 
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => {
-      sendTypingStatus(websocketRef, chatSession, userType, isStudent, anonymous);
-    }, 500);
   }}
   onKeyDown={(e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
