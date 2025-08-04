@@ -36,17 +36,20 @@ const SelfCareTips = () => {
 
   return (
  <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
- 
-      <h3 className=" p-4 text-lg font-semibold text-gray-800 dark:text-gray-100 mb-3">💜
-  Self-Care Tip of the Day</h3>
-      <h3 className="text-sm sm:text-base text-purple-700 dark:text-gray-300 leading-relaxed">
+     <div className="px-5 pt-5">
+       <header className="flex justify-between items-start mb-2">
+        <h2 className="text-base font-serif sm:text-lg font-light text-gray-500 dark:text-gray-100 mb-2">💜
+  Self-Care Tip of the Day</h2>
+  </header>
+     <p className="font-sans text-sm sm:text-base text-purple-400 dark:text-gray-300 leading-relaxed">
         {tip}
-      </h3>
+      </p>
 
-      <p className="text-sm sm:text-base text-gray-700 dark:text-gray-300  leading-relaxed">
+     <p className="font-sans text-sm sm:text-base text-gray-400 dark:text-gray-300 leading-relaxed">
         A small step toward your well-being.
       </p>
-    </div>
+</div>
+</div>
   );
 };
 

@@ -3,6 +3,7 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../../utils/axios-client-analytics';
+import { toast } from 'react-toastify';
 import { useStateValue } from '../../Context/UseStateValue';
 
 const CounselorAvailability = () => {
@@ -10,6 +11,8 @@ const CounselorAvailability = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [newTimeSlot, setNewTimeSlot] = useState('');
   const navigate =useNavigate()
+  const [startTime, setStartTime] = useState('');
+const [endTime, setEndTime] = useState('');
   const [message, setMessage] = useState('');
   const [tooltip, setTooltip] = useState('');
   const [{ mentor_id: contextMentorId }] = useStateValue();
@@ -42,7 +45,7 @@ const mentor_id = contextMentorId;
   const dd = String(date.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`; };
 
- const fetchAvailability = async () => {
+const fetchAvailability = async () => {
   const now = new Date();
   const payload = {
     month: now.getMonth() + 1,
@@ -62,82 +65,98 @@ const mentor_id = contextMentorId;
     );
 
     const data = res.data || [];
-    console.log(data)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const formatted = {};
-    const ids = {};
 
-    data.forEach(({ _id, date, time_slots }) => {
+    data.forEach(({ date, meeting_periods = [] }) => {
       const slotDate = new Date(date);
       slotDate.setHours(0, 0, 0, 0);
 
       if (slotDate >= today) {
-        formatted[date] = time_slots.map((t) => {
-          const [hour, minute] = t.split(':');
-          return `${hour}:${minute}`;
-        });
-
-        ids[date] = _id;
+        formatted[date] = meeting_periods;
       }
     });
 
     setAvailability(formatted);
-  
   } catch (error) {
     console.error('Failed to load availability:', error);
+    toast.error('Failed to load availability.');
   }
 };
+
 
 
   useEffect(() => {
     fetchAvailability();
   }, []);
 
-  const handleAddTimeSlot = () => {
-  if (!selectedDate || !newTimeSlot) return;
+ const handleAddTimeSlot = () => {
+  if (!selectedDate || !startTime || !endTime) return;
 
-  if (!isValidTime(newTimeSlot)) {
-    setMessage('Please enter time in HH:mm format (e.g. 14:30)');
+  if (startTime >= endTime) {
+    toast.error('Start time must be before end time.');
     return;
   }
 
   const key = getFormattedDate(selectedDate);
   const existing = availability[key] || [];
+  const newSlot = { start_time: startTime, end_time: endTime };
 
-  if (existing.includes(newTimeSlot)) {
+  // Check for exact duplicate
+  const isDuplicate = existing.some(
+    (slot) => slot.start_time === newSlot.start_time && slot.end_time === newSlot.end_time
+  );
+
+  if (isDuplicate) {
     toast.error('Slot already added.');
     return;
   }
 
+  const overlaps = existing.some((slot) => {
+    return !(
+      newSlot.end_time <= slot.start_time || newSlot.start_time >= slot.end_time
+    );
+  });
+
+  if (overlaps) {
+    toast.error('This slot overlaps with an existing one.');
+    return;
+  }
+
+
   const updated = {
     ...availability,
-    [key]: [...existing, newTimeSlot],
+    [key]: [...existing, newSlot],
   };
+
   setAvailability(updated);
-  setNewTimeSlot('');
-  toast.success('✅ Slot added.');
+  setStartTime('');
+  setEndTime('');
+  toast.success(' Slot added.');
 };
 
-  const handleRemoveSlot = (slot) => {
-    const key = getFormattedDate(selectedDate);
-    const updated = {
-      ...availability,
-      [key]: availability[key].filter((t) => t !== slot),
-    };
-    setAvailability(updated);
-     toast.warn('🗑️ Slot removed.');
+
+
+  const handleRemoveSlot = (slotToRemove) => {
+  const key = getFormattedDate(selectedDate);
+  const updated = {
+    ...availability,
+    [key]: availability[key].filter(
+      (slot) =>
+        slot.start_time !== slotToRemove.start_time ||
+        slot.end_time !== slotToRemove.end_time
+    ),
   };
+  setAvailability(updated);
+  toast.warn('🗑️ Slot removed.');
+};
 
 const handleSave = async () => {
-  const prevSelected = selectedDate; 
-
   const payload = Object.entries(availability).map(([date, time_slots]) => ({
     date,
-    time_slots: time_slots.map((slot) => {
-      return slot.length === 5 ? `${slot}:00` : slot;
-    }),
+    time_slots,
   }));
 
   try {
@@ -152,11 +171,7 @@ const handleSave = async () => {
       }
     );
 
-    console.log('✅ Saved:', res.data);
-   toast.success('✅ Availability saved.');
-
-    // await fetchAvailability();       
-    // setSelectedDate(prevSelected);     
+    toast.success('✅ Availability saved.');
   } catch (error) {
     console.error('Failed to save availability:', error);
     toast.error('❌ Failed to save availability.');
@@ -204,7 +219,7 @@ const modifiers = useMemo(() => ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (day < today) {
-      setTooltip('You can only add future dates');
+      toast.error('You can only add future dates');
     } else {
       setTooltip('');
     }
@@ -231,43 +246,68 @@ const modifiers = useMemo(() => ({
             <p className="text-sm text-gray-600 mb-1">Current slots:</p>
             {slots.length > 0 ? (
               <ul className="list-disc list-inside space-y-1">
-                {slots.map((slot) => (
-                  <li key={slot} className="flex justify-between items-center">
-                    <span>{slot}</span>
-                    <button
-                      className="text-red-500 text-sm hover:underline"
-                      onClick={() => handleRemoveSlot(slot)}
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-400">No slots set yet.</p>
+  {slots.map((slot, index) => (
+    <li key={`${slot.start_time}-${slot.end_time}-${index}`} className="flex justify-between items-center">
+      <span>{slot.start_time} - {slot.end_time}</span>
+      <button
+        className="text-red-500 text-sm hover:underline"
+        onClick={() => handleRemoveSlot(slot)}
+      >
+        Remove
+      </button>
+    </li>
+  ))}
+</ul>
+  ) : (
+     <p className="text-sm text-gray-400">No slots set yet.</p>
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
-           <input
-  type="time"
-  value={newTimeSlot}
-  onChange={(e) => setNewTimeSlot(e.target.value)}
-  step="60"
-  className="border border-gray-300 px-3 py-2 rounded w-40"
-/>
+    <div className="flex items-end space-x-4">
+  {/* Start Time */}
+  <div className="flex flex-col">
+    <label className="text-sm text-gray-700 mb-1">Start Time</label>
+    <input
+      type="time"
+      value={startTime}
+      onChange={(e) => setStartTime(e.target.value)}
+      step="60"
+      className="border border-gray-300 px-3 py-2 rounded w-32"
+    />
+  </div>
 
-            <button
-              className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-              onClick={handleAddTimeSlot}
-              disabled={
-                !selectedDate ||
-                new Date(getFormattedDate(selectedDate)) < new Date().setHours(0, 0, 0, 0)
-              }
-            >
-              Add Slot
-            </button>
-          </div>
+  {/* End Time */}
+  <div className="flex flex-col">
+    <label className="text-sm text-gray-700 mb-1">End Time</label>
+    <input
+      type="time"
+      value={endTime}
+      onChange={(e) => setEndTime(e.target.value)}
+      step="60"
+      className="border border-gray-300 px-3 py-2 rounded w-32"
+    />
+  </div>
+
+  {/* Add Slot Button */}
+  <div className="flex flex-col">
+    <label className="text-sm text-transparent mb-1">Add</label> {/* invisible label for alignment */}
+    <button
+      className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+      onClick={handleAddTimeSlot}
+      disabled={
+        !selectedDate ||
+        new Date(getFormattedDate(selectedDate)) < new Date(new Date().setHours(0, 0, 0, 0)) ||
+        !startTime ||
+        !endTime ||
+        startTime >= endTime
+      }
+    >
+      Add Slot
+    </button>
+  </div>
+</div>
+
+
 
           {message && <p className="mt-2 text-sm text-green-600">{message}</p>}
         </div>
