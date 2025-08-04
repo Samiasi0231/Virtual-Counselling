@@ -3,12 +3,13 @@ import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import axiosClient from '../utils/axios-client-analytics';
 import { toast } from 'react-toastify';
-import { useLocation,useParams, useNavigate} from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
+
 const StudentBooking = () => {
   const { mentor_id } = useParams();
   const navigate = useNavigate();
   const [availability, setAvailability] = useState({});
-  const[pastAvailableDates, setPastAvailableDates]=useState([])
+  const [pastAvailableDates, setPastAvailableDates] = useState([]);
   const [availableDates, setAvailableDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [timeSlots, setTimeSlots] = useState([]);
@@ -17,64 +18,68 @@ const StudentBooking = () => {
   const location = useLocation();
   const { fullname, profilePhoto } = location.state || {};
 
-
   const today = new Date();
-today.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
 
-const fetchAvailability = async () => {
-  const now = new Date();
-  const payload = {
-    month: now.getMonth() + 1,
-    year: now.getFullYear(),
-    mentor_id,
+  // Utility: calculate minutes between start and end
+  const getDurationInMinutes = (start, end) => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const startTime = new Date(1970, 0, 1, sh, sm);
+    const endTime = new Date(1970, 0, 1, eh, em);
+    return Math.floor((endTime - startTime) / (1000 * 60));
   };
 
-  try {
-    const res = await axiosClient.post(
-      `/vpc/get-availabilities/${mentor_id}/`,
-      payload,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+  // Format duration to "1 hr 30 min" style
+  const formatDuration = (minutes) => {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
+    if (hrs > 0) return `${hrs} hr`;
+    return `${mins} min`;
+  };
 
-    const data = res.data || [];
-    const formatted = {};
+  const fetchAvailability = async () => {
+    const now = new Date();
+    const payload = {
+      month: now.getMonth() + 1,
+      year: now.getFullYear(),
+      mentor_id,
+    };
 
-    data.forEach(({ date, time_slots }) => {
-    const iso = date instanceof Date ? date.toLocaleDateString('en-CA') : date;
+    try {
+      const res = await axiosClient.post(
+        `/vpc/get-availabilities/${mentor_id}/`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-      if (time_slots.length > 0) {
-        const sortedSlots = time_slots.sort((a, b) => {
-          return new Date(`1970-01-01T${a}:00`) - new Date(`1970-01-01T${b}:00`);
-        });
-        formatted[iso] = sortedSlots;
-      }
-    });
+      const data = res.data || [];
+      const formatted = {};
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+      data.forEach(({ date, meeting_periods }) => {
+        const iso = date instanceof Date ? date.toLocaleDateString('en-CA') : date;
+        if (meeting_periods.length > 0) {
+          formatted[iso] = meeting_periods;
+        }
+      });
 
-    // const key = selectedDate.toLocaleDateString('en-CA');
-const allDates = Object.keys(formatted);
-    const pastAvailable = allDates.filter((d) => new Date(d) < today);
-    const futureAvailable = allDates.filter((d) => new Date(d) >= today);
+      const allDates = Object.keys(formatted);
+      const pastAvailable = allDates.filter((d) => new Date(d) < today);
+      const futureAvailable = allDates.filter((d) => new Date(d) >= today);
 
-    setAvailability(formatted);
-    setAvailableDates(futureAvailable); 
-    setPastAvailableDates(pastAvailable);
-
-    console.log('Formatted Availability:', formatted);
-    console.log('Future Dates:', futureAvailable);
-    console.log('Past Dates:', pastAvailable);
-  } catch (error) {
-    console.error('Failed to load availability:', error);
-  }
-};
-
+      setAvailability(formatted);
+      setAvailableDates(futureAvailable);
+      setPastAvailableDates(pastAvailable);
+    } catch (error) {
+      console.error('Failed to load availability:', error);
+    }
+  };
 
   useEffect(() => {
     fetchAvailability();
@@ -82,71 +87,75 @@ const allDates = Object.keys(formatted);
 
   useEffect(() => {
     if (!selectedDate) return;
-  const key = selectedDate.toLocaleDateString('en-CA'); 
-    setTimeSlots(availability[key] || []);
+    const key = selectedDate.toLocaleDateString('en-CA');
+    const periods = availability[key] || [];
+
+    const formatted = periods.map(p => {
+      const duration = getDurationInMinutes(p.start_time, p.end_time);
+      const readable = formatDuration(duration);
+      return {
+        label: `${p.start_time} - ${p.end_time} (${readable})`,
+        start: p.start_time,
+        end: p.end_time,
+        duration,
+        readableDuration: readable,
+      };
+    });
+
+    setTimeSlots(formatted);
     setSelectedTime('');
   }, [selectedDate, availability]);
 
-const handleDateSelect = (date) => {
-  if (!date) return;
+  const handleDateSelect = (date) => {
+    if (!date) return;
+    const dateStr = date.toLocaleDateString('en-CA');
 
-  const dateStr = date.toLocaleDateString('en-CA');
+    if (!availability[dateStr]) {
+      toast.error('No available time slots for this date.');
+      return;
+    }
 
-
-  if (!availability[dateStr]) {
-    toast.error('No available time slots for this date.');
-    return;
-  }
-
-  setSelectedDate(date);
-};
-const handleConfirm = async () => {
-
-
-  if (!selectedDate || !selectedTime) return;
-
- console.log("Selected Date:", selectedDate);
-  console.log("Selected Time:", selectedTime);
-  const dateString = selectedDate.toLocaleDateString('en-CA'); 
-  const bookingTime = new Date(`${dateString}T${selectedTime}:00Z`).toISOString(); 
-
-  const payload = {
-    booking_time: bookingTime,
-    duration_minutes: 50,
-    mentor_id
-
+    setSelectedDate(date);
   };
 
-  try {
-    await axiosClient.post(`/vpc/create-booking/${mentor_id}/`, payload, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-        'Content-Type': 'application/json',
-      },
-    });
-toast.success('✅ Booking confirmed!');
-    setConfirmed(true);
-  } catch (error) {
-    console.error('Booking failed:', error);
-    toast.error(' Booking failed. Please try again.');
-  }
-};
+  const handleConfirm = async () => {
+    if (!selectedDate || !selectedTime) return;
 
+    const dateString = selectedDate.toLocaleDateString('en-CA');
+    const bookingTime = new Date(`${dateString}T${selectedTime.start}:00Z`).toISOString();
 
-const modifiers = {
-available: (date) => availableDates.includes(date.toLocaleDateString('en-CA')),
-pastAvailable: (date) => pastAvailableDates.includes(date.toLocaleDateString('en-CA')),
+    const payload = {
+      booking_time: bookingTime,
+      duration_minutes: selectedTime.duration,
+      mentor_id,
+    };
 
-};
+    try {
+      await axiosClient.post(`/vpc/create-booking/${mentor_id}/`, payload, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      toast.success('✅ Booking confirmed!');
+      setConfirmed(true);
+    } catch (error) {
+      console.error('Booking failed:', error);
+      toast.error('Booking failed. Please try again.');
+    }
+  };
 
+  const modifiers = {
+    available: (date) => availableDates.includes(date.toLocaleDateString('en-CA')),
+    pastAvailable: (date) => pastAvailableDates.includes(date.toLocaleDateString('en-CA')),
+  };
 
-const modifiersClassNames = {
-  available: 'bg-green-100 text-green-800 font-semibold rounded-full',
-  selected: 'bg-purple-600 text-white',
-  today: 'text-blue-800 font-bold border border-blue-500',
-  pastAvailable: 'bg-red-500 text-white font-semibold rounded-full'
-};
-
+  const modifiersClassNames = {
+    available: 'bg-green-100 text-green-800 font-semibold rounded-full',
+    selected: 'bg-purple-600 text-white',
+    today: 'text-blue-800 font-bold border border-blue-500',
+    pastAvailable: 'bg-red-500 text-white font-semibold rounded-full',
+  };
 
   const formattedDate = selectedDate?.toDateString();
 
@@ -154,35 +163,34 @@ const modifiersClassNames = {
     return (
       <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md border border-gray-200 space-y-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-2">✅ Booking Confirmed!</h2>
-
-         <button
-        onClick={() => navigate('/student/dashboard')}
-        className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-      >
-        OK
-      </button>
+        <button
+          onClick={() => navigate('/student/dashboard')}
+          className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
+          OK
+        </button>
       </div>
     );
   }
 
   return (
     <div className="border border-gray-200 overflow-auto mx-auto p-4 bg-white rounded-xl shadow">
-       <div className="mb-6">
-  <button
-    onClick={() => navigate(-1)}
-    className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
-  >
-    ← Back
-  </button>
-</div>
+      <div className="mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-purple-600 hover:text-purple-800 font-medium"
+        >
+          ← Back
+        </button>
+      </div>
       <div className="w-full p-6 space-y-6">
         {/* Counselor Info */}
         <div className="flex items-center space-x-4">
-         <img
-  src={profilePhoto}
-  alt={fullname}
-  className="w-20 h-20 rounded-full"
-/>
+          <img
+            src={profilePhoto}
+            alt={fullname}
+            className="w-20 h-20 rounded-full"
+          />
           <div>
             <h2 className="text-xl text-gray-500">You're booking with</h2>
             <h2 className="text-xl font-bold text-gray-800">{fullname}</h2>
@@ -199,11 +207,10 @@ const modifiersClassNames = {
             onSelect={handleDateSelect}
             modifiers={modifiers}
             modifiersClassNames={modifiersClassNames}
-   disabled={(date) => {
-  const iso = date.toLocaleDateString('en-CA');
-  return date < today || !availability[iso];
-}}
-
+            disabled={(date) => {
+              const iso = date.toLocaleDateString('en-CA');
+              return date < today || !availability[iso];
+            }}
             className="!text-sm"
           />
           <p className="text-xs text-gray-500 mt-2">
@@ -211,28 +218,28 @@ const modifiersClassNames = {
           </p>
         </div>
 
-        {/* Time Slots */}
+        {/* Time Slots with Durations */}
         {selectedDate && (
           <div>
             <h3 className="font-medium text-gray-700 mb-2">
-              Time slots on {formattedDate}:
+              Available periods on {formattedDate}:
             </h3>
             {timeSlots.length > 0 ? (
-              <ul className="grid grid-cols-2 gap-2 text-sm">
-                {timeSlots.map((slot) => (
-                  <li key={slot}>
+              <ul className="flex gap-2 flex-wrap text-sm">
+                {timeSlots.map((slot, idx) => (
+                  <li key={idx}>
                     <button
-                    onClick={() => {
-  setSelectedTime(slot);
-  toast.info(`🕒 Selected time: ${slot}`);
-}}
-                      className={` py-2 px-3 rounded border text-center ${
-                        selectedTime === slot
+                      onClick={() => {
+                        setSelectedTime(slot);
+                        toast.info(`🕒 Selected: ${slot.label}`);
+                      }}
+                      className={`py-2 px-4 rounded border text-center ${
+                        selectedTime?.label === slot.label
                           ? 'bg-purple-600 text-white'
                           : 'bg-gray-100 hover:bg-gray-200'
                       }`}
                     >
-                      {slot}
+                      {slot.label}
                     </button>
                   </li>
                 ))}
@@ -248,8 +255,8 @@ const modifiersClassNames = {
           <div className="bg-gray-50 border border-gray-200 p-4 rounded space-y-1">
             <h3 className="font-semibold text-purple-700 mb-1">Confirm Your Booking</h3>
             <p><strong>Date:</strong> {formattedDate}</p>
-            <p><strong>Time:</strong> {selectedTime}</p>
-            <p><strong>Duration:</strong> 50 minutes</p>
+            <p><strong>Time:</strong> {selectedTime.label}</p>
+            <p><strong>Duration:</strong> {selectedTime.readableDuration}</p>
           </div>
         )}
 

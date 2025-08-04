@@ -6,12 +6,7 @@ import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
 import {formatMessageDate} from "../../utils/time"
 import mergeAndDeduplicate  from "../../utils/message"
-
-
 import Avatar from 'react-avatar';
-
-
-
 const messageQueue = {
   queue: [],
   add(message) {
@@ -29,14 +24,51 @@ const messageQueue = {
   }
 };
 
-const getAnonymousMap = () => {
-  try {
-    const stored = localStorage.getItem('anonymous_map');
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
+const mergeAllCachedPages = (chatId) => {
+  const messages = [];
+  let page = 0;
+  while (true) {
+    const key = `chat_messages_${chatId}_page_${page}`;
+    const pageData = JSON.parse(localStorage.getItem(key) || '[]');
+    if (!pageData.length) break;
+    messages.push(...pageData);
+    page++;
   }
+
+  const seen = new Set();
+  return messages.filter((msg) => {
+    if (seen.has(msg.item_id)) return false;
+    seen.add(msg.item_id);
+    return true;
+  });
 };
+
+
+const formatMessage = (msg, userType) => {
+  const isFromCurrentUser = msg.from_counselor
+    ? userType === 'counsellor'
+    : userType === 'student';
+
+  const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+  const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+  return {
+    ...msg,
+    isFromCurrentUser,
+    file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+    fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+    text: msg.text || '',
+    time: new Date(msg.created_at).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    groupDate: formatMessageDate(msg.created_at),
+    studentAnonymous: msg.anonymous ?? false,
+    senderLastName: lastname,
+  };
+};
+
+
 let typingTimer = null;
 
 const sendTypingStatus = (websocketRef, chatSession, userType, isStudent, anonymous) => {
@@ -54,20 +86,12 @@ const sendTypingStatus = (websocketRef, chatSession, userType, isStudent, anonym
   }
 };
 
-const setAnonymousForChat = (chatId, value) => {
-  const map = getAnonymousMap();
-  map[chatId] = value;
-  localStorage.setItem('anonymous_map', JSON.stringify(map));
-};
 
-const getAnonymousForChat = (chatId) => {
-  const map = getAnonymousMap();
-  return map[chatId] ?? false;
-};
 
 const ChatPage = ({ initialRole = 'student' }) => {
   const scrollContainerRef = useRef(null);
-const [page, setPage] = useState(1); 
+const [page, setPage] = useState(0); 
+const [chatRooms, setChatRooms] = useState([]);
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
    const navigate = useNavigate();
   const websocketRef = useRef(null);
@@ -96,6 +120,31 @@ const chatIdToUse = chatIdFromURL || storedChatId;
   const [showScrollButtons, setShowScrollButtons] = useState({ up: false, down: false });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const messagesEndRef = useRef(null);
+const [anonymousMap, setAnonymousMap] = useState(() => {
+  try {
+    const stored = localStorage.getItem('anonymous_map');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+});
+
+// Getter and Setter
+const getAnonymousForChat = useCallback(
+  (chatId) => anonymousMap?.[chatId] ?? false,
+  [anonymousMap]
+);
+
+const setAnonymousForChat = useCallback(
+  (chatId, value) => {
+    const updatedMap = { ...anonymousMap, [chatId]: value };
+    setAnonymousMap(updatedMap);
+    localStorage.setItem('anonymous_map', JSON.stringify(updatedMap));
+  },
+  [anonymousMap]
+);
+
+
 
 
  useEffect(() => {
@@ -146,30 +195,55 @@ const extractFileData = (data) => {
   return { file: null, fileType: null };
 };
 
-const loadOlderMessages = async () => {
-  if (!chatSession?.item_id || !token) return;
 
+useEffect(() => {
+  const fetchChatRooms = async () => {
+    try {
+      const res = await axiosClient.get("/vpc/get-chat-rooms/", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setChatRooms(res.data || []);
+    } catch (err) {
+      console.error("Error fetching chat rooms:", err);
+    }
+  };
+
+  if (token) fetchChatRooms();
+}, [token]);
+
+const loadOlderMessages = async () => {
+  if (!chatSession?.item_id || !token || !hasMoreMessages) return;
+
+  const chatId = chatSession.item_id;
+  const pageKey = `chat_messages_${chatId}_page_${page}`;
   const container = scrollContainerRef.current;
   const prevScrollHeight = container?.scrollHeight;
 
   setLoadingMessages(true);
 
   try {
-    const res = await axiosClient.get(
-      `/vpc/get-messages/${chatSession.item_id}/?page=${page}&limit=5`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
+    // Try cache first
+    const cachedPage = JSON.parse(localStorage.getItem(pageKey) || '[]');
+    let older = cachedPage;
+
+    // If not cached, fetch from API
+    if (cachedPage.length === 0) {
+      const res = await axiosClient.get(
+        `/vpc/get-messages/${chatId}/?page=${page}&limit=20`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      older = Array.isArray(res.data?.messages) ? res.data.messages : [];
+
+      if (older.length === 0) {
+        setHasMoreMessages(false);
+        return;
       }
-    );
 
-    const olderMessages = Array.isArray(res.data.messages) ? res.data.messages : [];
-
-    if (olderMessages.length === 0) {
-      setHasMoreMessages(false);
-      return;
+      localStorage.setItem(pageKey, JSON.stringify(older));
     }
 
-    const formatted = olderMessages.map((msg) => {
+    const formatted = older.map((msg) => {
       const isFromCurrentUser = msg.from_counselor
         ? userType === 'counsellor'
         : userType === 'student';
@@ -193,19 +267,87 @@ const loadOlderMessages = async () => {
       };
     });
 
-    setMessages(prev => [...formatted, ...prev]);
-    setPage(prev => prev + 1);
+    setMessages((prev) => {
+      const existingIds = new Set(prev.map(m => m.item_id));
+      const unique = formatted.filter(m => !existingIds.has(m.item_id));
+      return [...unique, ...prev];
+    });
 
+    setPage((prev) => prev + 1);
+
+    // Maintain scroll position
     setTimeout(() => {
       const newScrollHeight = container?.scrollHeight;
-      container.scrollTop = newScrollHeight - prevScrollHeight;
+      if (container) container.scrollTop = newScrollHeight - prevScrollHeight;
     }, 100);
   } catch (err) {
-    console.error('Failed to load older messages:', err);
+    console.error(`Failed to load older messages for chat ${chatId}:`, err);
   } finally {
     setLoadingMessages(false);
   }
 };
+
+
+// const loadOlderMessages = async () => {
+//   if (!chatSession?.item_id || !token) return;
+
+//   const container = scrollContainerRef.current;
+//   const prevScrollHeight = container?.scrollHeight;
+
+//   setLoadingMessages(true);
+
+//   try {
+//     const res = await axiosClient.get(
+//       `/vpc/get-messages/${chatSession.item_id}/?page=${page}&limit=5`,
+//       {
+//         headers: { Authorization: `Bearer ${token}` },
+//       }
+//     );
+
+//     const olderMessages = Array.isArray(res.data.messages) ? res.data.messages : [];
+
+//     if (olderMessages.length === 0) {
+//       setHasMoreMessages(false);
+//       return;
+//     }
+
+//     const formatted = olderMessages.map((msg) => {
+//       const isFromCurrentUser = msg.from_counselor
+//         ? userType === 'counsellor'
+//         : userType === 'student';
+
+//       const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+//       const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+//       return {
+//         ...msg,
+//         isFromCurrentUser,
+//         file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+//         fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+//         text: msg.text || '',
+//         time: new Date(msg.created_at).toLocaleTimeString([], {
+//           hour: '2-digit',
+//           minute: '2-digit',
+//         }),
+//         groupDate: formatMessageDate(msg.created_at),
+//         studentAnonymous: msg.anonymous ?? false,
+//         senderLastName: lastname,
+//       };
+//     });
+
+//     setMessages(prev => [...formatted, ...prev]);
+//     setPage(prev => prev + 1);
+
+//     setTimeout(() => {
+//       const newScrollHeight = container?.scrollHeight;
+//       container.scrollTop = newScrollHeight - prevScrollHeight;
+//     }, 100);
+//   } catch (err) {
+//     console.error('Failed to load older messages:', err);
+//   } finally {
+//     setLoadingMessages(false);
+//   }
+// };
 
 
 useEffect(() => {
@@ -253,92 +395,50 @@ useEffect(() => {
   if (!['student', 'counsellor'].includes(userType)) {
     return <p className="text-center text-red-500">Unauthorized user</p>;
   }
-
-  const handleChatSelect = useCallback(async (chatRoom) => {
+const handleChatSelect = useCallback(async (chatRoom) => {
   if (!chatRoom?.item_id || !token) return;
 
   const chatId = chatRoom.item_id;
   setLoadingMessages(true);
 
   try {
-    let page = 1;
-    let allMessages = [];
-    let hasMore = true;
+    // 🚀 Hydrate from all cached pages
+    const cachedMessages = mergeAllCachedPages(chatId); // You must define this
+    const formattedCached = cachedMessages.map((msg) => formatMessage(msg, userType));
 
-    const cached = JSON.parse(localStorage.getItem(`chat_messages_${chatId}`) || '[]');
+    setMessages(formattedCached);
+    setPage(formattedCached.length ? Math.ceil(formattedCached.length / 20) : 1);
 
-    while (hasMore) {
-      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=${page}`, {
+    // Optionally fetch page 0 if no cache
+    if (formattedCached.length === 0) {
+      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=0&limit=20`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const currentPageMsgs = Array.isArray(res.data)
-        ? res.data
-        : res.data.fullMessages || res.data.messages || [];
+      const freshMessages = Array.isArray(res.data?.messages) ? res.data.messages : [];
+      localStorage.setItem(`chat_messages_${chatId}_page_0`, JSON.stringify(freshMessages));
 
-      if (!currentPageMsgs.length) break;
-
-      const alreadySeen = currentPageMsgs.some(msg =>
-        cached.some(c => c.item_id === msg.item_id)
-      );
-
-      allMessages = [...currentPageMsgs, ...allMessages];
-      if (alreadySeen) break;
-
-      page++;
-      hasMore = currentPageMsgs.length > 0;
+      const formatted = freshMessages.map((msg) => formatMessage(msg, userType));
+      setMessages(formatted);
     }
 
-    const formatted = allMessages.map((msg) => {
-      const isFromCurrentUser = msg.from_counselor
-        ? userType === 'counsellor'
-        : userType === 'student';
-
-      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
-      const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
-
-      return {
-        ...msg,
-        isFromCurrentUser,
-        file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
-        fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
-        text: msg.text || '',
-        time: new Date(msg.created_at).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        groupDate: formatMessageDate(msg.created_at),
-        studentAnonymous: msg.anonymous ?? false,
-        senderLastName: lastname,
-      };
-    });
-
-    const merged = mergeAndDeduplicate(cached, formatted);
-    const trimmed = merged.slice(-100); // keep only latest 100
-    localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(trimmed));
-    setMessages(trimmed);
-    setPage(page);
-    setHasMoreMessages(true);
-
-    const unread = trimmed
+    const unread = formattedCached
       .filter((msg) => !msg.read && msg.sender !== userType)
       .map((msg) => msg.item_id);
+
     setUnreadIds(unread);
     setUnreadCounts((prev) => ({ ...prev, [chatId]: unread.length }));
 
     const partnerData = isStudent ? chatRoom.counselor_data : chatRoom.user_data;
     setPartnerInfo(partnerData);
-
     setChatSession({
       item_id: chatId,
       user_anonymous: chatRoom.user_anonymous ?? false,
     });
 
     localStorage.setItem('lastChatId', chatId);
-
     if (isStudent) {
-      const savedAnonymous = getAnonymousForChat(chatId);
-      setAnonymous(savedAnonymous);
+      setAnonymous(getAnonymousForChat(chatId));
     }
 
     setMobileView(false);
@@ -347,7 +447,87 @@ useEffect(() => {
   } finally {
     setLoadingMessages(false);
   }
-}, [isStudent, token, userType]);
+}, [isStudent, token, userType, getAnonymousForChat]);
+
+// const handleChatSelect = useCallback(async (chatRoom) => {
+//   if (!chatRoom?.item_id || !token) return;
+
+//   const chatId = chatRoom.item_id;
+//   setLoadingMessages(true);
+
+//   try {
+//     // 🚀 Hydrate from all cached pages
+//     const cachedMessages = mergeAllCachedPages(chatId);
+//     const formattedCached = cachedMessages.map((msg) => {
+//       const isFromCurrentUser = msg.from_counselor
+//         ? userType === 'counsellor'
+//         : userType === 'student';
+
+//       const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+//       const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+//       return {
+//         ...msg,
+//         isFromCurrentUser,
+//         file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+//         fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+//         text: msg.text || '',
+//         time: new Date(msg.created_at).toLocaleTimeString([], {
+//           hour: '2-digit',
+//           minute: '2-digit',
+//         }),
+//         groupDate: formatMessageDate(msg.created_at),
+//         studentAnonymous: msg.anonymous ?? false,
+//         senderLastName: lastname,
+//       };
+//     });
+
+//     setMessages(formattedCached);
+//     setPage(formattedCached.length ? Math.ceil(formattedCached.length / 20) : 1); // Start loading from next page
+
+//     // Optionally fetch latest page 0 if cache is empty
+//     if (formattedCached.length === 0) {
+//       const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=0&limit=20`, {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+
+//       const freshMessages = Array.isArray(res.data?.messages) ? res.data.messages : [];
+//       localStorage.setItem(`chat_messages_${chatId}_page_0`, JSON.stringify(freshMessages));
+
+//       const formatted = freshMessages.map(/* same formatting as above */);
+//       setMessages(formatted);
+//     }
+
+//     const unread = formattedCached
+//       .filter((msg) => !msg.read && msg.sender !== userType)
+//       .map((msg) => msg.item_id);
+//     setUnreadIds(unread);
+//     setUnreadCounts((prev) => ({ ...prev, [chatId]: unread.length }));
+
+//     const partnerData = isStudent ? chatRoom.counselor_data : chatRoom.user_data;
+//     setPartnerInfo(partnerData);
+//     setChatSession({ item_id: chatId, user_anonymous: chatRoom.user_anonymous ?? false });
+
+//     localStorage.setItem('lastChatId', chatId);
+//     if (isStudent) setAnonymous(getAnonymousForChat(chatId));
+//     setMobileView(false);
+//   } catch (err) {
+//     console.error('Failed to fetch messages for selected chat:', err);
+//   } finally {
+//     setLoadingMessages(false);
+//   }
+// }, [isStudent, token, userType, getAnonymousForChat]);
+
+
+
+// useEffect(() => {
+//   if (!chatIdToUse || !chatRooms.length || chatSession) return;
+
+//   const matchingRoom = chatRooms.find(c => c.item_id === chatIdToUse);
+//   if (matchingRoom) {
+//     handleChatSelect(matchingRoom);
+//   }
+// }, [chatIdToUse, chatRooms, chatSession, handleChatSelect]);
 
 
   const partner = useMemo(() => userType === 'student'
@@ -401,7 +581,9 @@ const toggleAnonymous = async () => {
   const newAnonymousState = !anonymous;
   setAnonLoading(true);
   setAnonymous(newAnonymousState);
-  setAnonymousForChat(chatId, newAnonymousState);
+  // setAnonymousForChat(chatId, newAnonymousState);
+  setAnonymousForChat(chatId, newAnonymousState); 
+
   setChatSession((prev) => ({ ...prev, user_anonymous: newAnonymousState }));
 
   try {
@@ -678,13 +860,17 @@ return (
     )}
   </div>
   <div className={`w-full md:w-80 ${mobileView ? 'block' : 'hidden'} md:block`}>
-    <ChatSidepanel
-      partner={partner}
-      onChatSelect={handleChatSelect}
-      isStudent={isStudent}
-      activeChatId={chatSession?.item_id || chatIdFromURL}
-      unreadCounts={unreadCounts}
-    />
+<ChatSidepanel
+  partner={partner}
+  onChatSelect={handleChatSelect}
+  isStudent={isStudent}
+  activeChatId={chatSession?.item_id || chatIdFromURL}
+  unreadIds={unreadIds}
+  chatRooms={chatRooms}
+  getAnonymousForChat={getAnonymousForChat} 
+/>
+
+
   </div>
   <div className={`flex flex-col flex-1 bg-white shadow-md border-l ${mobileView ? 'hidden md:flex' : 'flex'}`}>
     {loadingMessages ? (
@@ -731,16 +917,7 @@ return (
 
  <div ref={scrollContainerRef}
 className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
-{hasMoreMessages && !loadingMessages && (
-  <div className="sticky top-3 z-20 flex justify-center">
-    <button
-      onClick={loadOlderMessages}
-      className="bg-purple-600 text-white text-xs px-3 py-1 rounded-full shadow hover:bg-purple-700"
-    >
-    More Messages
-    </button>
-  </div>
-)}
+
 
   {loadingMessages && (
     <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
