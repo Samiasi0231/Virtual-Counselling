@@ -429,7 +429,6 @@ const toggleAnonymous = async () => {
     websocketRef.current = ws;
   ws.onopen = () => {
       console.log('[WebSocket] Connected');
-      // Process any queued messages
       const queued = messageQueue.load();
       if (queued.length > 0) {
         queued.forEach(msg => {
@@ -573,7 +572,7 @@ const handleSend = async () => {
     if (isOnline && websocketRef.current?.readyState === WebSocket.OPEN) {
       websocketRef.current.send(JSON.stringify(messageData));
     } else {
-      // Queue the message if offline
+    
       messageQueue.add(messageData);
     }
 
