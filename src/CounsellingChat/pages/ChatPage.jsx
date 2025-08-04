@@ -6,7 +6,16 @@ import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
 import {formatMessageDate} from "../../utils/time"
 import mergeAndDeduplicate  from "../../utils/message"
+<<<<<<< HEAD
 import Avatar from 'react-avatar';
+=======
+
+
+import Avatar from 'react-avatar';
+
+
+
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 const messageQueue = {
   queue: [],
   add(message) {
@@ -21,6 +30,34 @@ const messageQueue = {
     const stored = localStorage.getItem('messageQueue');
     this.queue = stored ? JSON.parse(stored) : [];
     return this.queue;
+<<<<<<< HEAD
+=======
+  }
+};
+
+const getAnonymousMap = () => {
+  try {
+    const stored = localStorage.getItem('anonymous_map');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
+  }
+};
+let typingTimer = null;
+
+const sendTypingStatus = (websocketRef, chatSession, userType, isStudent, anonymous) => {
+  if (
+    websocketRef.current &&
+    websocketRef.current.readyState === WebSocket.OPEN &&
+    chatSession?.item_id
+  ) {
+    websocketRef.current.send(JSON.stringify({
+      type: 'typing',
+      sender: userType,
+      chatId: chatSession.item_id,
+      anonymous: isStudent ? anonymous : false,
+    }));
   }
 };
 
@@ -90,8 +127,12 @@ const sendTypingStatus = (websocketRef, chatSession, userType, isStudent, anonym
 
 const ChatPage = ({ initialRole = 'student' }) => {
   const scrollContainerRef = useRef(null);
+<<<<<<< HEAD
 const [page, setPage] = useState(0); 
 const [chatRooms, setChatRooms] = useState([]);
+=======
+const [page, setPage] = useState(1); 
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
    const navigate = useNavigate();
   const websocketRef = useRef(null);
@@ -175,6 +216,35 @@ const setAnonymousForChat = useCallback(
   }, [isOnline]);
 
 
+
+ useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isOnline && websocketRef.current?.readyState === WebSocket.OPEN) {
+      const queued = messageQueue.load();
+      if (queued.length > 0) {
+        queued.forEach(msg => {
+          if (websocketRef.current?.readyState === WebSocket.OPEN) {
+            websocketRef.current.send(JSON.stringify(msg));
+          }
+        });
+        messageQueue.clear();
+      }
+    }
+  }, [isOnline]);
+
+
   const normalizeProfilePhoto = (photo) => typeof photo === 'object' ? photo?.best : photo;
 
 
@@ -222,6 +292,7 @@ const loadOlderMessages = async () => {
   setLoadingMessages(true);
 
   try {
+<<<<<<< HEAD
     // Try cache first
     const cachedPage = JSON.parse(localStorage.getItem(pageKey) || '[]');
     let older = cachedPage;
@@ -238,6 +309,12 @@ const loadOlderMessages = async () => {
       if (older.length === 0) {
         setHasMoreMessages(false);
         return;
+=======
+    const res = await axiosClient.get(
+      `/vpc/get-messages/${chatSession.item_id}/?page=${page}&limit=5`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
       }
 
       localStorage.setItem(pageKey, JSON.stringify(older));
@@ -288,6 +365,7 @@ const loadOlderMessages = async () => {
 };
 
 
+<<<<<<< HEAD
 // const loadOlderMessages = async () => {
 //   if (!chatSession?.item_id || !token) return;
 
@@ -350,6 +428,8 @@ const loadOlderMessages = async () => {
 // };
 
 
+=======
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 useEffect(() => {
   const container = scrollContainerRef.current;
   if (!container) return;
@@ -398,10 +478,17 @@ useEffect(() => {
 const handleChatSelect = useCallback(async (chatRoom) => {
   if (!chatRoom?.item_id || !token) return;
 
+<<<<<<< HEAD
+=======
+  const handleChatSelect = useCallback(async (chatRoom) => {
+  if (!chatRoom?.item_id || !token) return;
+
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
   const chatId = chatRoom.item_id;
   setLoadingMessages(true);
 
   try {
+<<<<<<< HEAD
     // 🚀 Hydrate from all cached pages
     const cachedMessages = mergeAllCachedPages(chatId); // You must define this
     const formattedCached = cachedMessages.map((msg) => formatMessage(msg, userType));
@@ -441,12 +528,95 @@ const handleChatSelect = useCallback(async (chatRoom) => {
       setAnonymous(getAnonymousForChat(chatId));
     }
 
+=======
+    let page = 1;
+    let allMessages = [];
+    let hasMore = true;
+
+    const cached = JSON.parse(localStorage.getItem(`chat_messages_${chatId}`) || '[]');
+
+    while (hasMore) {
+      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=${page}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const currentPageMsgs = Array.isArray(res.data)
+        ? res.data
+        : res.data.fullMessages || res.data.messages || [];
+
+      if (!currentPageMsgs.length) break;
+
+      const alreadySeen = currentPageMsgs.some(msg =>
+        cached.some(c => c.item_id === msg.item_id)
+      );
+
+      allMessages = [...currentPageMsgs, ...allMessages];
+      if (alreadySeen) break;
+
+      page++;
+      hasMore = currentPageMsgs.length > 0;
+    }
+
+    const formatted = allMessages.map((msg) => {
+      const isFromCurrentUser = msg.from_counselor
+        ? userType === 'counsellor'
+        : userType === 'student';
+
+      const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
+      const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
+
+      return {
+        ...msg,
+        isFromCurrentUser,
+        file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
+        fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
+        text: msg.text || '',
+        time: new Date(msg.created_at).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        groupDate: formatMessageDate(msg.created_at),
+        studentAnonymous: msg.anonymous ?? false,
+        senderLastName: lastname,
+      };
+    });
+
+    const merged = mergeAndDeduplicate(cached, formatted);
+    const trimmed = merged.slice(-100); // keep only latest 100
+    localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(trimmed));
+    setMessages(trimmed);
+    setPage(page);
+    setHasMoreMessages(true);
+
+    const unread = trimmed
+      .filter((msg) => !msg.read && msg.sender !== userType)
+      .map((msg) => msg.item_id);
+    setUnreadIds(unread);
+    setUnreadCounts((prev) => ({ ...prev, [chatId]: unread.length }));
+
+    const partnerData = isStudent ? chatRoom.counselor_data : chatRoom.user_data;
+    setPartnerInfo(partnerData);
+
+    setChatSession({
+      item_id: chatId,
+      user_anonymous: chatRoom.user_anonymous ?? false,
+    });
+
+    localStorage.setItem('lastChatId', chatId);
+
+    if (isStudent) {
+      const savedAnonymous = getAnonymousForChat(chatId);
+      setAnonymous(savedAnonymous);
+    }
+
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
     setMobileView(false);
   } catch (err) {
     console.error('Failed to fetch messages for selected chat:', err);
   } finally {
     setLoadingMessages(false);
   }
+<<<<<<< HEAD
 }, [isStudent, token, userType, getAnonymousForChat]);
 
 // const handleChatSelect = useCallback(async (chatRoom) => {
@@ -528,6 +698,9 @@ const handleChatSelect = useCallback(async (chatRoom) => {
 //     handleChatSelect(matchingRoom);
 //   }
 // }, [chatIdToUse, chatRooms, chatSession, handleChatSelect]);
+=======
+}, [isStudent, token, userType]);
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 
 
   const partner = useMemo(() => userType === 'student'
@@ -917,7 +1090,20 @@ return (
 
  <div ref={scrollContainerRef}
 className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
+<<<<<<< HEAD
 
+=======
+{hasMoreMessages && !loadingMessages && (
+  <div className="sticky top-3 z-20 flex justify-center">
+    <button
+      onClick={loadOlderMessages}
+      className="bg-purple-600 text-white text-xs px-3 py-1 rounded-full shadow hover:bg-purple-700"
+    >
+    More Messages
+    </button>
+  </div>
+)}
+>>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 
   {loadingMessages && (
     <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
