@@ -97,20 +97,20 @@ const formatMessage = (msg, userType) => {
 
 const ChatPage = ({ initialRole = 'student' }) => {
   const scrollContainerRef = useRef(null);
-const [page, setPage] = useState(0); 
+const [page, setPage] = useState(1); 
 const [chatRooms, setChatRooms] = useState([]);
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
    const navigate = useNavigate();
   const websocketRef = useRef(null);
   const location = useLocation();
-  const [unreadCounts, setUnreadCounts] = useState({});
   const chatIdFromURL = new URLSearchParams(location.search).get('chatId');
 const storedChatId = localStorage.getItem('lastChatId');
 const chatIdToUse = chatIdFromURL || storedChatId; 
+const [showScrollButtons, setShowScrollButtons] = useState(false);
   const [{ student, counsellor, studentToken, counsellorToken }] = useStateValue();
- const [anonLoading, setAnonLoading] = useState(false);
  const [showScrollDown, setShowScrollDown] = useState(false);
   const contextUser = student || counsellor;
+  const [unreadCounts, setUnreadCounts] = useState({});
   const userType = contextUser?.user_type;
   const token = userType === 'student' ? studentToken : counsellorToken;
   const isStudent = userType === 'student';
@@ -124,7 +124,6 @@ const chatIdToUse = chatIdFromURL || storedChatId;
   const [file, setFile] = useState(null);
   const [mobileView, setMobileView] = useState(() => !chatIdFromURL);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [showScrollButtons, setShowScrollButtons] = useState({ up: false, down: false });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const messagesEndRef = useRef(null);
 const [anonymousMap, setAnonymousMap] = useState(() => {
@@ -136,7 +135,6 @@ const [anonymousMap, setAnonymousMap] = useState(() => {
   }
 });
 
-// Getter and Setter
 const getAnonymousForChat = useCallback(
   (chatId) => anonymousMap?.[chatId] ?? false,
   [anonymousMap]
@@ -258,14 +256,11 @@ const loadOlderMessages = async () => {
   setLoadingMessages(true);
 
   try {
-    // Try cache first
     const cachedPage = JSON.parse(localStorage.getItem(pageKey) || '[]');
     let older = cachedPage;
-
-    // If not cached, fetch from API
-    if (cachedPage.length === 0) {
+    if (cachedPage.length === 1) {
       const res = await axiosClient.get(
-        `/vpc/get-messages/${chatId}/?page=${page}&limit=20`,
+        `/vpc/get-messages/${chatId}/?page=${page}&limit=25`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
@@ -439,21 +434,20 @@ useEffect(() => {
 
   try {
 
-    // 🚀 Hydrate from all cached pages
-    const cachedMessages = mergeAllCachedPages(chatId); // You must define this
+    
+    const cachedMessages = mergeAllCachedPages(chatId); 
     const formattedCached = cachedMessages.map((msg) => formatMessage(msg, userType));
 
     setMessages(formattedCached);
-    setPage(formattedCached.length ? Math.ceil(formattedCached.length / 20) : 1);
+    setPage(formattedCached.length ? Math.ceil(formattedCached.length / 25) : 1);
 
-    // Optionally fetch page 0 if no cache
-    if (formattedCached.length === 0) {
-      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=0&limit=20`, {
+    if (formattedCached.length === 1) {
+      const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=0&limit=25`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const freshMessages = Array.isArray(res.data?.messages) ? res.data.messages : [];
-      localStorage.setItem(`chat_messages_${chatId}_page_0`, JSON.stringify(freshMessages));
+      localStorage.setItem(`chat_messages_${chatId}_page_1`, JSON.stringify(freshMessages));
 
       const formatted = freshMessages.map((msg) => formatMessage(msg, userType));
       setMessages(formatted);
@@ -472,7 +466,7 @@ useEffect(() => {
       item_id: chatId,
       user_anonymous: chatRoom.user_anonymous ?? false,
     });
-
+navigate(`?chatId=${chatId}`, { replace: true });
     localStorage.setItem('lastChatId', chatId);
     if (isStudent) {
       setAnonymous(getAnonymousForChat(chatId));
@@ -559,84 +553,18 @@ useEffect(() => {
   }
 }, [isStudent, token, userType, getAnonymousForChat]);
 
-// const handleChatSelect = useCallback(async (chatRoom) => {
-//   if (!chatRoom?.item_id || !token) return;
 
-//   const chatId = chatRoom.item_id;
-//   setLoadingMessages(true);
-
-//   try {
-//     // 🚀 Hydrate from all cached pages
-//     const cachedMessages = mergeAllCachedPages(chatId);
-//     const formattedCached = cachedMessages.map((msg) => {
-//       const isFromCurrentUser = msg.from_counselor
-//         ? userType === 'counsellor'
-//         : userType === 'student';
-
-//       const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
-//       const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
-
-//       return {
-//         ...msg,
-//         isFromCurrentUser,
-//         file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
-//         fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
-//         text: msg.text || '',
-//         time: new Date(msg.created_at).toLocaleTimeString([], {
-//           hour: '2-digit',
-//           minute: '2-digit',
-//         }),
-//         groupDate: formatMessageDate(msg.created_at),
-//         studentAnonymous: msg.anonymous ?? false,
-//         senderLastName: lastname,
-//       };
-//     });
-
-//     setMessages(formattedCached);
-//     setPage(formattedCached.length ? Math.ceil(formattedCached.length / 20) : 1); // Start loading from next page
-
-//     // Optionally fetch latest page 0 if cache is empty
-//     if (formattedCached.length === 0) {
-//       const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=0&limit=20`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-
-//       const freshMessages = Array.isArray(res.data?.messages) ? res.data.messages : [];
-//       localStorage.setItem(`chat_messages_${chatId}_page_0`, JSON.stringify(freshMessages));
-
-//       const formatted = freshMessages.map(/* same formatting as above */);
-//       setMessages(formatted);
-//     }
-
-//     const unread = formattedCached
-//       .filter((msg) => !msg.read && msg.sender !== userType)
-//       .map((msg) => msg.item_id);
-//     setUnreadIds(unread);
-//     setUnreadCounts((prev) => ({ ...prev, [chatId]: unread.length }));
-
-//     const partnerData = isStudent ? chatRoom.counselor_data : chatRoom.user_data;
-//     setPartnerInfo(partnerData);
-//     setChatSession({ item_id: chatId, user_anonymous: chatRoom.user_anonymous ?? false });
-
-//     localStorage.setItem('lastChatId', chatId);
-//     if (isStudent) setAnonymous(getAnonymousForChat(chatId));
-//     setMobileView(false);
-//   } catch (err) {
-//     console.error('Failed to fetch messages for selected chat:', err);
-//   } finally {
-//     setLoadingMessages(false);
-//   }
-// }, [isStudent, token, userType, getAnonymousForChat]);
 
 
 useEffect(() => {
-  if (!chatIdToUse || !chatRooms.length || chatSession?.item_id === chatIdToUse) return;
+  if (!chatIdToUse || !chatRooms.length) return;
 
   const match = chatRooms.find(c => c.item_id === chatIdToUse);
   if (match) {
     handleChatSelect(match);
   }
-}, [chatIdToUse, chatRooms, chatSession?.item_id, handleChatSelect]);
+
+}, []);
 
 
 

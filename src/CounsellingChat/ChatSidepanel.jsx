@@ -14,23 +14,12 @@ const ChatSidepanel = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [chatsOpen, setChatsOpen] = useState(true);
-  const [recentChats, setRecentChats] = useState(chatRooms); // fallback to prop
+  const [recentChats, setRecentChats] = useState(chatRooms); 
   const unreadSet = new Set(unreadIds);
 
-  // Fetch chat rooms if not passed as prop
-  useEffect(() => {
-    if (!chatRooms.length) {
-      const fetchChatRooms = async () => {
-        try {
-          const res = await axiosClient.get("/vpc/get-chat-rooms/");
-          setRecentChats(res.data || []);
-        } catch (err) {
-          console.error("Error fetching chat rooms:", err);
-        }
-      };
-      fetchChatRooms();
-    }
-  }, [chatRooms]);
+useEffect(() => {
+  setRecentChats(chatRooms); 
+}, [chatRooms]);
 
   const filteredChats = recentChats.filter((chat) => {
     const partner = isStudent ? chat.counselor_data : chat.user_data;
