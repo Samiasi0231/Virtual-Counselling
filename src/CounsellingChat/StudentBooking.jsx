@@ -226,32 +226,23 @@ const StudentBooking = () => {
             </h3>
             {timeSlots.length > 0 ? (
               <ul className="flex gap-2 flex-wrap text-sm">
-                {timeSlots.map((slot, idx) => (
-                  <li key={idx}>
-                    <button
-<<<<<<< HEAD
-                      onClick={() => {
-                        setSelectedTime(slot);
-                        toast.info(`🕒 Selected: ${slot.label}`);
-                      }}
-                      className={`py-2 px-4 rounded border text-center ${
-                        selectedTime?.label === slot.label
-=======
-                    onClick={() => {
-  setSelectedTime(slot);
-  toast.info(`🕒 Selected time: ${slot}`);
-}}
-                      className={` py-2 px-3 rounded border text-center ${
-                        selectedTime === slot
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
-                          ? 'bg-purple-600 text-white'
-                          : 'bg-gray-100 hover:bg-gray-200'
-                      }`}
-                    >
-                      {slot.label}
-                    </button>
-                  </li>
-                ))}
+         {timeSlots.map((slot, idx) => (
+  <li key={idx}>
+    <button
+      onClick={() => {
+        setSelectedTime(slot);
+        toast.info(`🕒 Selected: ${slot.label}`);
+      }}
+      className={`py-2 px-4 rounded border text-center ${
+        selectedTime?.label === slot.label
+          ? 'bg-purple-600 text-white'
+          : 'bg-gray-100 hover:bg-gray-200'
+      }`}
+    >
+      {slot.label}
+    </button>
+  </li>
+))}
               </ul>
             ) : (
               <p className="text-sm text-blue-500">No slots available for this day.</p>

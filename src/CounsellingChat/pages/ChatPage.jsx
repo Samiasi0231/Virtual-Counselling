@@ -4,18 +4,11 @@ import { FiSend, FiPaperclip, FiUser, FiUserX, FiMenu } from 'react-icons/fi';
 import { useStateValue } from '../../Context/UseStateValue';
 import axiosClient from '../../utils/axios-client-analytics';
 import ChatSidepanel from '../ChatSidepanel';
+import InfiniteScroll from 'react-infinite-scroll-component';
 import {formatMessageDate} from "../../utils/time"
 import mergeAndDeduplicate  from "../../utils/message"
-<<<<<<< HEAD
-import Avatar from 'react-avatar';
-=======
-
-
 import Avatar from 'react-avatar';
 
-
-
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 const messageQueue = {
   queue: [],
   add(message) {
@@ -30,8 +23,6 @@ const messageQueue = {
     const stored = localStorage.getItem('messageQueue');
     this.queue = stored ? JSON.parse(stored) : [];
     return this.queue;
-<<<<<<< HEAD
-=======
   }
 };
 
@@ -41,7 +32,6 @@ const getAnonymousMap = () => {
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
   }
 };
 let typingTimer = null;
@@ -105,38 +95,15 @@ const formatMessage = (msg, userType) => {
   };
 };
 
-
-let typingTimer = null;
-
-const sendTypingStatus = (websocketRef, chatSession, userType, isStudent, anonymous) => {
-  if (
-    websocketRef.current &&
-    websocketRef.current.readyState === WebSocket.OPEN &&
-    chatSession?.item_id
-  ) {
-    websocketRef.current.send(JSON.stringify({
-      type: 'typing',
-      sender: userType,
-      chatId: chatSession.item_id,
-      anonymous: isStudent ? anonymous : false,
-    }));
-  }
-};
-
-
-
 const ChatPage = ({ initialRole = 'student' }) => {
   const scrollContainerRef = useRef(null);
-<<<<<<< HEAD
 const [page, setPage] = useState(0); 
 const [chatRooms, setChatRooms] = useState([]);
-=======
-const [page, setPage] = useState(1); 
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
    const navigate = useNavigate();
   const websocketRef = useRef(null);
   const location = useLocation();
+  const [unreadCounts, setUnreadCounts] = useState({});
   const chatIdFromURL = new URLSearchParams(location.search).get('chatId');
 const storedChatId = localStorage.getItem('lastChatId');
 const chatIdToUse = chatIdFromURL || storedChatId; 
@@ -157,7 +124,6 @@ const chatIdToUse = chatIdFromURL || storedChatId;
   const [file, setFile] = useState(null);
   const [mobileView, setMobileView] = useState(() => !chatIdFromURL);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [unreadCounts, setUnreadCounts] = useState({});
   const [showScrollButtons, setShowScrollButtons] = useState({ up: false, down: false });
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const messagesEndRef = useRef(null);
@@ -292,7 +258,6 @@ const loadOlderMessages = async () => {
   setLoadingMessages(true);
 
   try {
-<<<<<<< HEAD
     // Try cache first
     const cachedPage = JSON.parse(localStorage.getItem(pageKey) || '[]');
     let older = cachedPage;
@@ -309,12 +274,6 @@ const loadOlderMessages = async () => {
       if (older.length === 0) {
         setHasMoreMessages(false);
         return;
-=======
-    const res = await axiosClient.get(
-      `/vpc/get-messages/${chatSession.item_id}/?page=${page}&limit=5`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
       }
 
       localStorage.setItem(pageKey, JSON.stringify(older));
@@ -365,7 +324,6 @@ const loadOlderMessages = async () => {
 };
 
 
-<<<<<<< HEAD
 // const loadOlderMessages = async () => {
 //   if (!chatSession?.item_id || !token) return;
 
@@ -427,9 +385,6 @@ const loadOlderMessages = async () => {
 //   }
 // };
 
-
-=======
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 useEffect(() => {
   const container = scrollContainerRef.current;
   if (!container) return;
@@ -475,20 +430,15 @@ useEffect(() => {
   if (!['student', 'counsellor'].includes(userType)) {
     return <p className="text-center text-red-500">Unauthorized user</p>;
   }
-const handleChatSelect = useCallback(async (chatRoom) => {
-  if (!chatRoom?.item_id || !token) return;
 
-<<<<<<< HEAD
-=======
   const handleChatSelect = useCallback(async (chatRoom) => {
   if (!chatRoom?.item_id || !token) return;
 
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
   const chatId = chatRoom.item_id;
   setLoadingMessages(true);
 
   try {
-<<<<<<< HEAD
+
     // 🚀 Hydrate from all cached pages
     const cachedMessages = mergeAllCachedPages(chatId); // You must define this
     const formattedCached = cachedMessages.map((msg) => formatMessage(msg, userType));
@@ -528,7 +478,6 @@ const handleChatSelect = useCallback(async (chatRoom) => {
       setAnonymous(getAnonymousForChat(chatId));
     }
 
-=======
     let page = 1;
     let allMessages = [];
     let hasMore = true;
@@ -582,20 +531,13 @@ const handleChatSelect = useCallback(async (chatRoom) => {
     });
 
     const merged = mergeAndDeduplicate(cached, formatted);
-    const trimmed = merged.slice(-100); // keep only latest 100
+    const trimmed = merged.slice(-100); 
     localStorage.setItem(`chat_messages_${chatId}`, JSON.stringify(trimmed));
     setMessages(trimmed);
     setPage(page);
     setHasMoreMessages(true);
 
-    const unread = trimmed
-      .filter((msg) => !msg.read && msg.sender !== userType)
-      .map((msg) => msg.item_id);
-    setUnreadIds(unread);
-    setUnreadCounts((prev) => ({ ...prev, [chatId]: unread.length }));
-
-    const partnerData = isStudent ? chatRoom.counselor_data : chatRoom.user_data;
-    setPartnerInfo(partnerData);
+    
 
     setChatSession({
       item_id: chatId,
@@ -609,14 +551,12 @@ const handleChatSelect = useCallback(async (chatRoom) => {
       setAnonymous(savedAnonymous);
     }
 
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
     setMobileView(false);
   } catch (err) {
     console.error('Failed to fetch messages for selected chat:', err);
   } finally {
     setLoadingMessages(false);
   }
-<<<<<<< HEAD
 }, [isStudent, token, userType, getAnonymousForChat]);
 
 // const handleChatSelect = useCallback(async (chatRoom) => {
@@ -689,18 +629,15 @@ const handleChatSelect = useCallback(async (chatRoom) => {
 // }, [isStudent, token, userType, getAnonymousForChat]);
 
 
+useEffect(() => {
+  if (!chatIdToUse || !chatRooms.length || chatSession?.item_id === chatIdToUse) return;
 
-// useEffect(() => {
-//   if (!chatIdToUse || !chatRooms.length || chatSession) return;
+  const match = chatRooms.find(c => c.item_id === chatIdToUse);
+  if (match) {
+    handleChatSelect(match);
+  }
+}, [chatIdToUse, chatRooms, chatSession?.item_id, handleChatSelect]);
 
-//   const matchingRoom = chatRooms.find(c => c.item_id === chatIdToUse);
-//   if (matchingRoom) {
-//     handleChatSelect(matchingRoom);
-//   }
-// }, [chatIdToUse, chatRooms, chatSession, handleChatSelect]);
-=======
-}, [isStudent, token, userType]);
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
 
 
   const partner = useMemo(() => userType === 'student'
@@ -1087,121 +1024,136 @@ return (
             </div>
           )}
         </div>
-
- <div ref={scrollContainerRef}
-className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative">
-<<<<<<< HEAD
-
-=======
-{hasMoreMessages && !loadingMessages && (
-  <div className="sticky top-3 z-20 flex justify-center">
-    <button
-      onClick={loadOlderMessages}
-      className="bg-purple-600 text-white text-xs px-3 py-1 rounded-full shadow hover:bg-purple-700"
-    >
-    More Messages
-    </button>
-  </div>
-)}
->>>>>>> 72b2643fe629700b5247f66e0a56deb333041fe2
-
-  {loadingMessages && (
-    <div className="absolute top-0 left-0 right-0 bottom-0 flex justify-center items-center bg-white/60 z-10">
-      <span className="text-sm text-gray-500">Loading messages...</span>
-    </div>
-  )}
-
- {Object.entries(groupedMessages).map(([date, msgs]) => (
-  <div key={`group-${date}-${msgs[0]?.id || date}`}>
-    <div className="text-center text-xs text-gray-500 my-3">{date}</div>
-
-    {msgs.map((msg,index)=> (
-      <div
-     key={msg.id || `msg-${index}`}
-        className={`flex ${msg.isFromCurrentUser ? 'justify-end' : 'justify-start'} items-start gap-1 mb-1`}
-      >
-        {!msg.isFromCurrentUser && (
-          <div className="shrink-0">
-            {msg.senderAvatar && !msg.studentAnonymous ? (
-              <img
-                src={msg.senderAvatar}
-                alt={getSenderName(msg)}
-                className="w-6 h-6 rounded-full object-cover"
-                title={getSenderName(msg)}
-              />
-            ) : (
-              <Avatar
-                name={getSenderName(msg)}
-                size="24"
-                round
-                title={getSenderName(msg)}
-              />
-            )}
-          </div>
-        )}
-
-        <div
-          className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
-            msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
-          } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
-        >
-          <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
-            <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong> {msg.text}
-          </div>
-
-          {msg.file && (
-            <>
-              {msg.fileType === 'image' ? (
-                <img
-                  src={msg.file}
-                  alt="Uploaded"
-                  className="mt-2 rounded max-w-xs max-h-40 object-cover"
-                />
-              ) : (
-                <p className="text-xs text-blue-600 mt-1 break-all">
-                  📎{' '}
-                  <a href={msg.file} target="_blank" rel="noopener noreferrer">
-                    {msg.file}
-                  </a>
-                </p>
-              )}
-            </>
-          )}
-
-          <span
-            className={`text-[10px] block mt-1 text-right ${
-              msg.isFromCurrentUser && msg.read ? 'text-green-600' : 'text-gray-500'
-            }`}
-          >
-            {msg.isFromCurrentUser ? (msg.read ? '✓✓' : '✓') : ''}
-            {msg.time}
-          </span>
-        </div>
+    <div
+  id="scrollableDiv"
+  ref={scrollContainerRef}
+  className="flex-1 px-3 py-2 overflow-y-auto space-y-2 bg-gray-50 relative"
+>
+  <InfiniteScroll
+    dataLength={messages.length}
+    next={loadOlderMessages}
+    hasMore={hasMoreMessages}
+    inverse={true}
+    scrollableTarget="scrollableDiv"
+    loader={
+      <div className="text-center text-xs text-gray-400 py-2">
+        Loading older messages...
       </div>
-    ))}
-  </div>
+    }
+    style={{ display: 'flex', flexDirection: 'column-reverse' }}
+  >
+   {Object.entries(groupedMessages)
+  .sort(([a], [b]) => new Date(a) - new Date(b)) // Ensure date group order ascending
+  .reverse() // Invert for inverse scroll
+  .map(([date, msgs]) => (
+    <div key={`group-${date}-${msgs[0]?.id || date}`}>
+      <div className="text-center text-xs text-gray-500 my-3">{date}</div>
+
+      {msgs
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) // Ensure message order within date
+        .map((msg, index) => (
+          <div
+            key={msg.id || `msg-${index}`}
+            className={`flex ${
+              msg.isFromCurrentUser ? 'justify-end' : 'justify-start'
+            } items-start gap-1 mb-1`}
+          >
+            {!msg.isFromCurrentUser && (
+              <div className="shrink-0">
+                {msg.senderAvatar && !msg.studentAnonymous ? (
+                  <img
+                    src={msg.senderAvatar}
+                    alt={getSenderName(msg)}
+                    className="w-6 h-6 rounded-full object-cover"
+                    title={getSenderName(msg)}
+                  />
+                ) : (
+                  <Avatar
+                    name={getSenderName(msg)}
+                    size="24"
+                    round
+                    title={getSenderName(msg)}
+                  />
+                )}
+              </div>
+            )}
+
+            <div
+              className={`p-4 rounded-2xl max-w-md md:max-w-[75%] transition-all duration-300 ${
+                msg.isFromCurrentUser ? 'bg-green-200' : 'bg-white border'
+              } ${unreadIds.includes(msg.id) ? 'ring-2 ring-purple-400' : ''}`}
+            >
+              <div className="whitespace-pre-wrap break-words text-sm overflow-hidden">
+                <strong title={getSenderName(msg)}>{getSenderName(msg)}:</strong>{' '}
+                {msg.text}
+              </div>
+
+              {msg.file && (
+                <>
+                  {msg.fileType === 'image' ? (
+                    <img
+                      src={msg.file}
+                      alt="Uploaded"
+                      className="mt-2 rounded max-w-xs max-h-40 object-cover"
+                    />
+                  ) : (
+                    <p className="text-xs text-blue-600 mt-1 break-all">
+                      📎{' '}
+                      <a href={msg.file} target="_blank" rel="noopener noreferrer">
+                        {msg.file}
+                      </a>
+                    </p>
+                  )}
+                </>
+              )}
+
+           <span
+  className={`text-[10px] block mt-1 text-right ${
+    msg.isFromCurrentUser ? 'text-green-600' : 'text-gray-500'
+  }`}
+>
+  {msg.isFromCurrentUser && (
+    Array.isArray(msg.seen_users) && msg.seen_users.includes(contextUser?.item_id)
+      ? '✓✓'
+      : '✓'
+  )}{' '}
+  {msg.time}
+</span>
+
+            </div>
+          </div>
+        ))}
+    </div>
 ))}
 
+  </InfiniteScroll>
 
+  {/* Typing Indicator */}
   {typing && typing.sender && typing.sender !== userType && (
     <div className="text-sm italic text-gray-500">
-      {typing.sender === 'student' ? (typing.anonymous ? 'Anonymous' : 'Student') : 'Counsellor'} is typing...
+      {typing.sender === 'student'
+        ? typing.anonymous
+          ? 'Anonymous'
+          : 'Student'
+        : 'Counsellor'}{' '}
+      is typing...
     </div>
   )}
 
+  {/* Scroll to bottom button */}
   <div ref={messagesEndRef} />
-{showScrollDown && (
-  <button
-    onClick={scrollToBottom}
-    className="fixed bottom-24 right-4 z-50 bg-purple-600 text-white p-2 rounded-full shadow-md hover:bg-purple-700 md:bottom-20"
-    title="Scroll to latest message"
-  >
-    ↓
-  </button>
-)}
-
-
+  {showScrollDown && (
+    <button
+      onClick={scrollToBottom}
+      className="fixed bottom-24 right-4 z-50 bg-purple-600 text-white p-2 rounded-full shadow-md hover:bg-purple-700 md:bottom-20"
+      title="Scroll to latest message"
+    >
+      ↓
+    </button>
+  )}
 </div>
+
+
         <div className="flex flex-col px-4 py-3 border-t bg-white gap-2">
           {file && (
             <div className="flex items-center justify-between bg-gray-100 p-2 rounded border">
