@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef,useMemo,useCallback,useLayoutEffect } from 'react';
-import { useLocation,useNavigate,useSearchParams } from 'react-router-dom';
+import { useLocation,useNavigate} from 'react-router-dom';
 import { FiSend, FiPaperclip, FiUser, FiUserX, FiMenu } from 'react-icons/fi';
 import { useStateValue } from '../../Context/UseStateValue';
 import axiosClient from '../../utils/axios-client-analytics';
@@ -26,14 +26,14 @@ const messageQueue = {
   }
 };
 
-const getAnonymousMap = () => {
-  try {
-    const stored = localStorage.getItem('anonymous_map');
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-};
+// const getAnonymousMap = () => {
+//   try {
+//     const stored = localStorage.getItem('anonymous_map');
+//     return stored ? JSON.parse(stored) : {};
+//   } catch {
+//     return {};
+//   }
+// };
 let typingTimer = null;
 
 const sendTypingStatus = (websocketRef, chatSession, userType, isStudent, anonymous) => {
@@ -97,7 +97,7 @@ const formatMessage = (msg, userType) => {
 
 const ChatPage = ({ initialRole = 'student' }) => {
   const scrollContainerRef = useRef(null);
-const [page, setPage] = useState(1); 
+const [page, setPage] = useState(0); 
 const [chatRooms, setChatRooms] = useState([]);
 const [hasMoreMessages, setHasMoreMessages] = useState(true);
    const navigate = useNavigate();
@@ -114,6 +114,7 @@ const [showScrollButtons, setShowScrollButtons] = useState(false);
   const userType = contextUser?.user_type;
   const token = userType === 'student' ? studentToken : counsellorToken;
   const isStudent = userType === 'student';
+  const [anonLoading, setAnonLoading] = useState(false);
   const [unreadIds, setUnreadIds] = useState([]);
   const [chatSession, setChatSession] = useState(null);
   const [partnerInfo, setPartnerInfo] = useState(null);
@@ -180,39 +181,7 @@ const setAnonymousForChat = useCallback(
   }, [isOnline]);
 
 
-
- useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isOnline && websocketRef.current?.readyState === WebSocket.OPEN) {
-      const queued = messageQueue.load();
-      if (queued.length > 0) {
-        queued.forEach(msg => {
-          if (websocketRef.current?.readyState === WebSocket.OPEN) {
-            websocketRef.current.send(JSON.stringify(msg));
-          }
-        });
-        messageQueue.clear();
-      }
-    }
-  }, [isOnline]);
-
-
   const normalizeProfilePhoto = (photo) => typeof photo === 'object' ? photo?.best : photo;
-
-
-
 const extractFileData = (data) => {
   if (Array.isArray(data.attachments) && data.attachments.length > 0) {
     return {
@@ -258,7 +227,7 @@ const loadOlderMessages = async () => {
   try {
     const cachedPage = JSON.parse(localStorage.getItem(pageKey) || '[]');
     let older = cachedPage;
-    if (cachedPage.length === 1) {
+    if (cachedPage.length === 0) {
       const res = await axiosClient.get(
         `/vpc/get-messages/${chatId}/?page=${page}&limit=25`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -306,7 +275,7 @@ const loadOlderMessages = async () => {
 
     setPage((prev) => prev + 1);
 
-    // Maintain scroll position
+   
     setTimeout(() => {
       const newScrollHeight = container?.scrollHeight;
       if (container) container.scrollTop = newScrollHeight - prevScrollHeight;
@@ -317,68 +286,6 @@ const loadOlderMessages = async () => {
     setLoadingMessages(false);
   }
 };
-
-
-// const loadOlderMessages = async () => {
-//   if (!chatSession?.item_id || !token) return;
-
-//   const container = scrollContainerRef.current;
-//   const prevScrollHeight = container?.scrollHeight;
-
-//   setLoadingMessages(true);
-
-//   try {
-//     const res = await axiosClient.get(
-//       `/vpc/get-messages/${chatSession.item_id}/?page=${page}&limit=5`,
-//       {
-//         headers: { Authorization: `Bearer ${token}` },
-//       }
-//     );
-
-//     const olderMessages = Array.isArray(res.data.messages) ? res.data.messages : [];
-
-//     if (olderMessages.length === 0) {
-//       setHasMoreMessages(false);
-//       return;
-//     }
-
-//     const formatted = olderMessages.map((msg) => {
-//       const isFromCurrentUser = msg.from_counselor
-//         ? userType === 'counsellor'
-//         : userType === 'student';
-
-//       const sender = msg.from_counselor ? msg.sender_counselor : msg.sender_user;
-//       const lastname = sender?.fullname?.split(' ').slice(-1)[0] || '';
-
-//       return {
-//         ...msg,
-//         isFromCurrentUser,
-//         file: msg.attachments?.[0]?.location || msg.media?.[0]?.location || null,
-//         fileType: msg.attachments?.[0]?.attachments_type || msg.media?.[0]?.media_type || null,
-//         text: msg.text || '',
-//         time: new Date(msg.created_at).toLocaleTimeString([], {
-//           hour: '2-digit',
-//           minute: '2-digit',
-//         }),
-//         groupDate: formatMessageDate(msg.created_at),
-//         studentAnonymous: msg.anonymous ?? false,
-//         senderLastName: lastname,
-//       };
-//     });
-
-//     setMessages(prev => [...formatted, ...prev]);
-//     setPage(prev => prev + 1);
-
-//     setTimeout(() => {
-//       const newScrollHeight = container?.scrollHeight;
-//       container.scrollTop = newScrollHeight - prevScrollHeight;
-//     }, 100);
-//   } catch (err) {
-//     console.error('Failed to load older messages:', err);
-//   } finally {
-//     setLoadingMessages(false);
-//   }
-// };
 
 useEffect(() => {
   const container = scrollContainerRef.current;
@@ -401,10 +308,7 @@ useEffect(() => {
 
   return () => container.removeEventListener('scroll', handleScroll);
 }, []);
-
-
-
-  const isStudentAnonymous = chatSession?.user_anonymous;
+   const isStudentAnonymous = chatSession?.user_anonymous;
 
  const displayName = useMemo(() => {
   if (!partnerInfo) return isStudent ? 'Counselor' : (isStudentAnonymous ? 'Anonymous' : 'Student');
@@ -439,18 +343,19 @@ useEffect(() => {
     const formattedCached = cachedMessages.map((msg) => formatMessage(msg, userType));
 
     setMessages(formattedCached);
-    setPage(formattedCached.length ? Math.ceil(formattedCached.length / 25) : 1);
+    setPage(formattedCached.length ? Math.ceil(formattedCached.length / 25) : 0);
 
-    if (formattedCached.length === 1) {
+    if (formattedCached.length === 0) {
       const res = await axiosClient.get(`/vpc/get-messages/${chatId}/?page=0&limit=25`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       const freshMessages = Array.isArray(res.data?.messages) ? res.data.messages : [];
-      localStorage.setItem(`chat_messages_${chatId}_page_1`, JSON.stringify(freshMessages));
+      localStorage.setItem(`chat_messages_${chatId}_page_0`, JSON.stringify(freshMessages));
 
       const formatted = freshMessages.map((msg) => formatMessage(msg, userType));
       setMessages(formatted);
+      setPage(1)
     }
 
     const unread = formattedCached
@@ -531,13 +436,6 @@ navigate(`?chatId=${chatId}`, { replace: true });
     setPage(page);
     setHasMoreMessages(true);
 
-    
-
-    setChatSession({
-      item_id: chatId,
-      user_anonymous: chatRoom.user_anonymous ?? false,
-    });
-
     localStorage.setItem('lastChatId', chatId);
 
     if (isStudent) {
@@ -553,18 +451,61 @@ navigate(`?chatId=${chatId}`, { replace: true });
   }
 }, [isStudent, token, userType, getAnonymousForChat]);
 
+const createNewChatRoom = async (partnerId) => {
+  try {
+    const res = await axiosClient.post('/vpc/create-chat/', {
+      user_id: isStudent ? undefined : partnerId,
+      counselor_id: isStudent ? partnerId : undefined,
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.data?.item_id) {
+      const newRoom = res.data;
+      setChatRooms(prev => [...prev, newRoom]);
+      handleChatSelect(newRoom);
+    }
+  } catch (err) {
+    console.error("Failed to create new chat room:", err);
+  }
+};
 
 
 
 useEffect(() => {
-  if (!chatIdToUse || !chatRooms.length) return;
+  const searchParams = new URLSearchParams(location.search);
+  const chatIdParam = searchParams.get('chatId');
+  const userIdParam = searchParams.get('userId');
 
-  const match = chatRooms.find(c => c.item_id === chatIdToUse);
-  if (match) {
-    handleChatSelect(match);
+  if (!chatRooms.length) return;
+
+  if (chatIdParam) {
+    const match = chatRooms.find(c => c.item_id === chatIdParam);
+    if (match) handleChatSelect(match);
+    return;
   }
 
-}, []);
+  if (userIdParam) {
+    const match = chatRooms.find(c =>
+      isStudent
+        ? c.counselor_data?.item_id === userIdParam
+        : c.user_data?.item_id === userIdParam
+    );
+
+    if (match) {
+      handleChatSelect(match);
+    } else {
+      createNewChatRoom(userIdParam); 
+    }
+    return;
+  }
+
+  if (storedChatId) {
+    const match = chatRooms.find(c => c.item_id === storedChatId);
+    if (match) handleChatSelect(match);
+  }
+}, [chatRooms]);
+
 
 
 
@@ -619,7 +560,6 @@ const toggleAnonymous = async () => {
   const newAnonymousState = !anonymous;
   setAnonLoading(true);
   setAnonymous(newAnonymousState);
-  // setAnonymousForChat(chatId, newAnonymousState);
   setAnonymousForChat(chatId, newAnonymousState); 
 
   setChatSession((prev) => ({ ...prev, user_anonymous: newAnonymousState }));
@@ -971,14 +911,14 @@ return (
     style={{ display: 'flex', flexDirection: 'column-reverse' }}
   >
    {Object.entries(groupedMessages)
-  .sort(([a], [b]) => new Date(a) - new Date(b)) // Ensure date group order ascending
-  .reverse() // Invert for inverse scroll
+  .sort(([a], [b]) => new Date(a) - new Date(b)) 
+  .reverse() 
   .map(([date, msgs]) => (
     <div key={`group-${date}-${msgs[0]?.id || date}`}>
       <div className="text-center text-xs text-gray-500 my-3">{date}</div>
 
       {msgs
-        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) // Ensure message order within date
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) 
         .map((msg, index) => (
           <div
             key={msg.id || `msg-${index}`}
