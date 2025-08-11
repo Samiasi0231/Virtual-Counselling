@@ -6,7 +6,7 @@ import DashboardCard01 from '../partials/dashboard/DashboardCard01';
 import DashboardCard02 from '../partials/dashboard/DashboardCard02';
 //  import DashboardCard04 from '../partials/dashboard/DashboardCard04';
 import DashboardCard10 from '../partials/dashboard/CounsellorList';
-import DashboardCard05 from '../partials/dashboard/DashboardCared05';
+// import DashboardCard05 from '../partials/dashboard/DashboardCared05';
 import StudentWelocome from '../partials/dashboard/StudentWelcom';
 
 import Banner from '../layout/Banner';
@@ -51,7 +51,7 @@ function Dashboard() {
   <>
     <DashboardCard01 />
    <DashboardCard02 /> 
-    <DashboardCard05 />
+    {/* <DashboardCard05 /> */}
      {/* <DashboardCard04 />   */}
      <CounsellorShedule/>
                    </>
@@ -64,7 +64,7 @@ function Dashboard() {
   <StudentWelocome/>
   <SelfCareTips />
 <DashboardCard10 />  
-<DashboardCard05 /> 
+{/* <DashboardCard05 />  */}
  <StudentShedule /> 
 
 
