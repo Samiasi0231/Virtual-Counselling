@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient from '../../utils/axios-client-analytics';
+import { toast } from 'react-toastify';
 
 const ALERT_THRESHOLD_MINUTES = 5;
 
@@ -17,26 +18,42 @@ const CounselorSchedule = () => {
       const data = res.data || [];
 
       const parsed = data.map((item) => {
-        const dateObj = new Date(item.booking_time);
+        const dateStr = item.availability_period?.availability_date
+          ? item.availability_period.availability_date.split('T')[0]
+          : null;
+
+        const startTime = item.availability_period?.start_time || '00:00';
+        const endTime = item.availability_period?.end_time || '00:00';
+
+        const dateObj = dateStr
+          ? new Date(`${dateStr}T${startTime}`)
+          : new Date();
+
         return {
           id: item.item_id,
-          counselor: item.counsellor.fullname,
+          counselor: item.counsellor?.fullname || 'Unknown Counselor',
           dateObj,
           date: dateObj.toLocaleDateString('en-CA'),
-          time: dateObj.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          }),
+          time: `${startTime} - ${endTime}`,
           duration: `${item.duration_minutes} minutes`,
-          status: 'Booked',
+          status: item.availability_period?.booked ? 'Booked' : 'Available',
           alerted: false,
         };
       });
 
-      setBookings(parsed.filter((b) => b.dateObj > new Date()));
+      // ✅ Remove duplicates (same date + same time)
+      const uniqueBookings = parsed.filter(
+        (b, index, self) =>
+          index ===
+          self.findIndex(
+            (x) => x.date === b.date && x.time === b.time
+          )
+      );
+
+      setBookings(uniqueBookings.filter((b) => b.dateObj > new Date()));
     } catch (err) {
       console.error('Error fetching bookings:', err);
-     toast.error(' Error fetching bookings.');
+      toast.error('Error fetching bookings.');
     }
   };
 
@@ -52,16 +69,16 @@ const CounselorSchedule = () => {
       });
 
       setBookings((prev) => prev.filter((b) => b.id !== id));
-        toast.success('✅ Booking removed successfully.');
+      toast.success('✅ Booking removed successfully.');
     } catch (err) {
       console.error('Delete failed:', err);
-     toast.error('Failed to delete booking.');
+      toast.error('Failed to delete booking.');
     }
   };
 
   useEffect(() => {
     fetchBookings();
-    const interval = setInterval(fetchBookings, 30000); 
+    const interval = setInterval(fetchBookings, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -74,7 +91,8 @@ const CounselorSchedule = () => {
           .filter((b) => b.dateObj > now)
           .map((b) => {
             const diff = b.dateObj - now;
-            const shouldNotify = diff < ALERT_THRESHOLD_MINUTES * 60 * 1000 && !b.alerted;
+            const shouldNotify =
+              diff < ALERT_THRESHOLD_MINUTES * 60 * 1000 && !b.alerted;
 
             return shouldNotify ? { ...b, alerted: true } : b;
           })
@@ -106,7 +124,7 @@ const CounselorSchedule = () => {
       };
 
       updateCountdown();
-      const interval = setInterval(updateCountdown, 60000); 
+      const interval = setInterval(updateCountdown, 60000);
       return () => clearInterval(interval);
     }, [booking.dateObj]);
 
@@ -128,8 +146,10 @@ const CounselorSchedule = () => {
   return (
     <div className="flex p-4 flex-col col-span-full sm:col-span-6 xl:col-span-4 bg-white dark:bg-gray-800 shadow-xs rounded-xl">
       <div className="px-5 pt-5">
-       <header className="flex justify-between items-start mb-2">
-        <h2 className="text-base font-serif sm:text-lg font-light text-gray-500 dark:text-gray-100 mb-2">Counsellor Schedule</h2>
+        <header className="flex justify-between items-start mb-2">
+          <h2 className="text-base font-serif sm:text-lg font-light text-gray-500 dark:text-gray-100 mb-2">
+            Counsellor Schedule
+          </h2>
         </header>
         {bookings.length === 0 ? (
           <p className="text-gray-500 text-sm">No sessions booked yet.</p>

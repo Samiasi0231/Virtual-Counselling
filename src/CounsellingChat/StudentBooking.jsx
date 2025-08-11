@@ -30,7 +30,6 @@ const StudentBooking = () => {
     return Math.floor((endTime - startTime) / (1000 * 60));
   };
 
-  // Format duration to "1 hr 30 min" style
   const formatDuration = (minutes) => {
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -39,12 +38,10 @@ const StudentBooking = () => {
     return `${mins} min`;
   };
 
-  const fetchAvailability = async () => {
-    const now = new Date();
+  const fetchAvailability = async (monthDate = new Date()) => {
     const payload = {
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
-      mentor_id,
+      month: monthDate.getMonth() + 1,
+      year: monthDate.getFullYear(),
     };
 
     try {
@@ -59,13 +56,19 @@ const StudentBooking = () => {
         }
       );
 
-      const data = res.data || [];
+      const data = Array.isArray(res.data) ? res.data : [res.data];
       const formatted = {};
 
-      data.forEach(({ date, meeting_periods }) => {
-        const iso = date instanceof Date ? date.toLocaleDateString('en-CA') : date;
-        if (meeting_periods.length > 0) {
-          formatted[iso] = meeting_periods;
+      data.forEach(({ day, periods }) => {
+        if (!day?.date) return;
+        const iso = day.date;
+        if (Array.isArray(periods) && periods.length > 0) {
+          formatted[iso] = periods.map((p) => ({
+            id: p._id,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            booked: p.booked,
+          }));
         }
       });
 
@@ -78,6 +81,7 @@ const StudentBooking = () => {
       setPastAvailableDates(pastAvailable);
     } catch (error) {
       console.error('Failed to load availability:', error);
+      toast.error('Failed to load availability.');
     }
   };
 
@@ -90,15 +94,24 @@ const StudentBooking = () => {
     const key = selectedDate.toLocaleDateString('en-CA');
     const periods = availability[key] || [];
 
-    const formatted = periods.map(p => {
+    // Deduplicate by start_time + end_time
+    const uniquePeriods = Array.from(
+      new Map(
+        periods.map((p) => [`${p.start_time}-${p.end_time}`, p])
+      ).values()
+    );
+
+    const formatted = uniquePeriods.map((p) => {
       const duration = getDurationInMinutes(p.start_time, p.end_time);
       const readable = formatDuration(duration);
       return {
+        id: p.id || p._id,
         label: `${p.start_time} - ${p.end_time} (${readable})`,
         start: p.start_time,
         end: p.end_time,
         duration,
         readableDuration: readable,
+        booked: p.booked,
       };
     });
 
@@ -118,16 +131,21 @@ const StudentBooking = () => {
     setSelectedDate(date);
   };
 
+  const handleSelectSlot = (slot) => {
+    if (slot.booked) {
+      toast.error('This slot is already booked. Please choose another.');
+      return;
+    }
+    setSelectedTime(slot);
+    toast.info(`🕒 Selected: ${slot.label}`);
+  };
+
   const handleConfirm = async () => {
     if (!selectedDate || !selectedTime) return;
 
-    const dateString = selectedDate.toLocaleDateString('en-CA');
-    const bookingTime = new Date(`${dateString}T${selectedTime.start}:00Z`).toISOString();
-
     const payload = {
-      booking_time: bookingTime,
+      availability_period_id: selectedTime.id,
       duration_minutes: selectedTime.duration,
-      mentor_id,
     };
 
     try {
@@ -138,6 +156,9 @@ const StudentBooking = () => {
         },
       });
       toast.success('✅ Booking confirmed!');
+
+      await fetchAvailability(selectedDate);
+
       setConfirmed(true);
     } catch (error) {
       console.error('Booking failed:', error);
@@ -146,12 +167,14 @@ const StudentBooking = () => {
   };
 
   const modifiers = {
-    available: (date) => availableDates.includes(date.toLocaleDateString('en-CA')),
-    pastAvailable: (date) => pastAvailableDates.includes(date.toLocaleDateString('en-CA')),
+    available: (date) =>
+      availableDates.includes(date.toLocaleDateString('en-CA')),
+    pastAvailable: (date) =>
+      pastAvailableDates.includes(date.toLocaleDateString('en-CA')),
   };
 
   const modifiersClassNames = {
-    available: 'bg-green-100 text-green-800 font-semibold rounded-full',
+    available: 'bg-green-200 text-green-800 font-semibold rounded-full',
     selected: 'bg-purple-600 text-white',
     today: 'text-blue-800 font-bold border border-blue-500',
     pastAvailable: 'bg-red-500 text-white font-semibold rounded-full',
@@ -162,9 +185,11 @@ const StudentBooking = () => {
   if (confirmed) {
     return (
       <div className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-md border border-gray-200 space-y-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">✅ Booking Confirmed!</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          ✅ Booking Confirmed!
+        </h2>
         <button
-          onClick={() => navigate('/student/dashboard')}
+          onClick={() => navigate('/student/')}
           className="px-6 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
         >
           OK
@@ -218,7 +243,7 @@ const StudentBooking = () => {
           </p>
         </div>
 
-        {/* Time Slots with Durations */}
+        {/* Time Slots */}
         {selectedDate && (
           <div>
             <h3 className="font-medium text-gray-700 mb-2">
@@ -226,37 +251,47 @@ const StudentBooking = () => {
             </h3>
             {timeSlots.length > 0 ? (
               <ul className="flex gap-2 flex-wrap text-sm">
-         {timeSlots.map((slot, idx) => (
-  <li key={idx}>
-    <button
-      onClick={() => {
-        setSelectedTime(slot);
-        toast.info(`🕒 Selected: ${slot.label}`);
-      }}
-      className={`py-2 px-4 rounded border text-center ${
-        selectedTime?.label === slot.label
-          ? 'bg-purple-600 text-white'
-          : 'bg-gray-100 hover:bg-gray-200'
-      }`}
-    >
-      {slot.label}
-    </button>
-  </li>
-))}
+                {timeSlots.map((slot, idx) => (
+                  <li key={idx}>
+                    <button
+                      onClick={() => handleSelectSlot(slot)}
+                      disabled={slot.booked}
+                      className={`py-2 px-4 rounded border text-center ${
+                        slot.booked
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : selectedTime?.label === slot.label
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200'
+                      }`}
+                    >
+                      {slot.label} {slot.booked && '(Booked)'}
+                    </button>
+                  </li>
+                ))}
               </ul>
             ) : (
-              <p className="text-sm text-blue-500">No slots available for this day.</p>
+              <p className="text-sm text-blue-500">
+                No slots available for this day.
+              </p>
             )}
           </div>
         )}
 
         {/* Summary & Confirm */}
-        {selectedDate && selectedTime && (
+        {selectedDate && selectedTime && !selectedTime.booked && (
           <div className="bg-gray-50 border border-gray-200 p-4 rounded space-y-1">
-            <h3 className="font-semibold text-purple-700 mb-1">Confirm Your Booking</h3>
-            <p><strong>Date:</strong> {formattedDate}</p>
-            <p><strong>Time:</strong> {selectedTime.label}</p>
-            <p><strong>Duration:</strong> {selectedTime.readableDuration}</p>
+            <h3 className="font-semibold text-purple-700 mb-1">
+              Confirm Your Booking
+            </h3>
+            <p>
+              <strong>Date:</strong> {formattedDate}
+            </p>
+            <p>
+              <strong>Time:</strong> {selectedTime.label}
+            </p>
+            <p>
+              <strong>Duration:</strong> {selectedTime.readableDuration}
+            </p>
           </div>
         )}
 
@@ -272,7 +307,7 @@ const StudentBooking = () => {
             Cancel
           </button>
           <button
-            disabled={!selectedDate || !selectedTime}
+            disabled={!selectedDate || !selectedTime || selectedTime.booked}
             onClick={handleConfirm}
             className="px-4 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
           >
